@@ -2862,9 +2862,9 @@ void RenderBpmnEditorNode(const Node* node, ICanvas& canvas, const UiTheme& them
                                 DrawTaskTypeMarker(canvas, iconBox, kRowTasks[k], pal.textPrimary, pal.hudHover, s * 0.9f);
                             }
                         } else if (selNode->type == BpmnNodeType::Gateway) {
-                            DrawGatewayMarker(canvas, iconBox.Center(), 7.0f * s, static_cast<BpmnGatewayType>(k), pal.gatewayStroke, s * 0.8f);
+                            DrawGatewayMarker(canvas, iconBox.Center(), 7.0f * s, keel::from_underlying<BpmnGatewayType>(k), pal.gatewayStroke, s * 0.8f);
                         } else {
-                            DrawEventDefinitionSymbol(canvas, iconBox.Center(), 7.0f * s, static_cast<BpmnEventDefinition>(k), selNode->type == BpmnNodeType::EndEvent, pal.textPrimary, pal.hudHover, s * 0.85f);
+                            DrawEventDefinitionSymbol(canvas, iconBox.Center(), 7.0f * s, keel::from_underlying<BpmnEventDefinition>(k), selNode->type == BpmnNodeType::EndEvent, pal.textPrimary, pal.hudHover, s * 0.85f);
                         }
 
                         canvas.DrawTextBox(items[k], Rect(ir.x + 26.0f * s, ir.y, ir.w - 30.0f * s, ir.h), 10.0f * s, isRowHov ? pal.selectAccent : pal.textPrimary, 0.0f, 0.5f);
@@ -3434,9 +3434,9 @@ BpmnEditorResponse BpmnEditor::Run(
                                             }
                                             diagram.SyncBoundaryEvents();
                                         } else if (mutNode->type == BpmnNodeType::Gateway && idx < 4) {
-                                            mutNode->gatewayType = static_cast<BpmnGatewayType>(idx);
+                                            mutNode->gatewayType = keel::from_underlying<BpmnGatewayType>(idx);
                                         } else if (idx < 7) {
-                                            mutNode->eventDef = static_cast<BpmnEventDefinition>(idx);
+                                            mutNode->eventDef = keel::from_underlying<BpmnEventDefinition>(idx);
                                         }
                                         resp.changed = true;
                                         resp.diagramModified = true;
@@ -4663,7 +4663,7 @@ BpmnEditorResponse BpmnEditor::Run(
 
     state.renderSnapshot = diagram.clone();
 
-    Node* node = ctx.CreateNode(static_cast<NodeType>(keel::as<keel::u16>(NodeType::User) + 20u), id);
+    Node* node = ctx.CreateNode(keel::from_underlying<NodeType>(keel::as<keel::u16>(NodeType::User) + 20u), id);
     auto* payload = ctx.AllocPayload<BpmnEditorPayload>();
     payload->opts = effOpts;
     payload->opts.tooltip = ctx.AllocText(opts.tooltip);
