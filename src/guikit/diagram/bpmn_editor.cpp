@@ -211,9 +211,9 @@ struct BpmnPalette {
 
 struct AlignmentGuide {
     bool vertical{true};
-    float worldCoord{0.0f};
-    float worldSpanMin{0.0f};
-    float worldSpanMax{0.0f};
+    keel::f32 worldCoord{0.0f};
+    keel::f32 worldSpanMin{0.0f};
+    keel::f32 worldSpanMax{0.0f};
 };
 
 struct NodePosEntry {
@@ -232,7 +232,7 @@ struct BpmnEditorState {
     keel::u32 lastFirstNodeId{0};
 
     Vec2 pan{60.0f, 44.0f};
-    float zoom{1.0f};
+    keel::f32 zoom{1.0f};
 
     BpmnTool activeTool{BpmnTool::Select};
 
@@ -345,8 +345,8 @@ struct BpmnEditorState {
     keel::Array<BpmnEdge> clipboardEdges{};
 
     // Token simulation timing
-    double lastSimTickSec{0.0};
-    double spawnCooldownSec{0.0};
+    keel::f64 lastSimTickSec{0.0};
+    keel::f64 spawnCooldownSec{0.0};
     keel::u32 nextTokenId{1};
     keel::u32 nextInstanceId{1};
     bool simPaused{false};
@@ -442,7 +442,7 @@ struct BpmnEditorPayload {
     keel::StringRef activeEditBuffer{};
     keel::usize activeEditCursor{0};
     bool cursorBlinkOn{true};
-    float animPhase{0.0f};
+    keel::f32 animPhase{0.0f};
 };
 
 // ============================================================================
@@ -453,11 +453,11 @@ void DrawWrappedTextBox(
     ICanvas& canvas,
     keel::StringRef text,
     Rect bounds,
-    float fontSize,
+    keel::f32 fontSize,
     Color color,
     FontStyle style = FontStyle::Regular,
-    float alignX = 0.5f,
-    float alignY = 0.5f,
+    keel::f32 alignX = 0.5f,
+    keel::f32 alignY = 0.5f,
     keel::usize maxLines = 3
 ) {
     if (text.empty() || color.a == 0 || bounds.w <= 4.0f || bounds.h <= 4.0f || maxLines == 0) return;
@@ -491,7 +491,7 @@ void DrawWrappedTextBox(
                 candidate.append(word);
             }
 
-            const float candW = canvas.MeasureTextStyled(candidate, fontSize, style).x;
+            const keel::f32 candW = canvas.MeasureTextStyled(candidate, fontSize, style).x;
             if (!currentLine.empty() && candW > bounds.w && lines.size() + 1 < maxLines) {
                 lines.push_back(keel::move(currentLine));
                 currentLine = keel::SmallString<128>::from(word);
@@ -511,9 +511,9 @@ void DrawWrappedTextBox(
 
     if (lines.empty()) return;
 
-    const float lineH = keel::max(fontSize * 1.18f, canvas.GetLineHeight(fontSize) * 0.94f);
-    const float totalH = static_cast<float>(lines.size()) * lineH;
-    float startY = bounds.y + (bounds.h - totalH) * alignY;
+    const keel::f32 lineH = keel::max(fontSize * 1.18f, canvas.GetLineHeight(fontSize) * 0.94f);
+    const keel::f32 totalH = keel::as<keel::f32>(lines.size()) * lineH;
+    keel::f32 startY = bounds.y + (bounds.h - totalH) * alignY;
 
     for (const auto& line : lines) {
         const Rect lr(bounds.x, startY, bounds.w, lineH);
@@ -526,15 +526,15 @@ void DrawVerticalRotatedHeaderText(
     ICanvas& canvas,
     keel::StringRef text,
     Rect stripRect,
-    float fontSize,
+    keel::f32 fontSize,
     Color color,
     FontStyle style = FontStyle::Bold
 ) {
     if (text.empty() || stripRect.w <= 4.0f || stripRect.h <= 16.0f) return;
     canvas.PushClip(stripRect);
     const Vec2 tm = canvas.MeasureTextStyled(text, fontSize, style);
-    const float tx = stripRect.x + (stripRect.w - tm.y) * 0.5f;
-    const float ty = stripRect.y + (stripRect.h + keel::min(tm.x, stripRect.h - 8.0f)) * 0.5f;
+    const keel::f32 tx = stripRect.x + (stripRect.w - tm.y) * 0.5f;
+    const keel::f32 ty = stripRect.y + (stripRect.h + keel::min(tm.x, stripRect.h - 8.0f)) * 0.5f;
     canvas.DrawTextStyled(text, {tx, ty}, fontSize, color, style, -90.0f);
     canvas.PopClip();
 }
@@ -543,34 +543,34 @@ void DrawVerticalRotatedHeaderText(
 // Coordinate & Geometry Helpers
 // ============================================================================
 
-[[nodiscard]] Vec2 WorldToScreen(Vec2 w, const Rect& viewRect, Vec2 pan, float zoom) noexcept {
+[[nodiscard]] Vec2 WorldToScreen(Vec2 w, const Rect& viewRect, Vec2 pan, keel::f32 zoom) noexcept {
     return Vec2{
         viewRect.x + pan.x + w.x * zoom,
         viewRect.y + pan.y + w.y * zoom
     };
 }
 
-[[nodiscard]] Vec2 ScreenToWorld(Vec2 s, const Rect& viewRect, Vec2 pan, float zoom) noexcept {
-    const float z = keel::max(0.05f, zoom);
+[[nodiscard]] Vec2 ScreenToWorld(Vec2 s, const Rect& viewRect, Vec2 pan, keel::f32 zoom) noexcept {
+    const keel::f32 z = keel::max(0.05f, zoom);
     return Vec2{
         (s.x - viewRect.x - pan.x) / z,
         (s.y - viewRect.y - pan.y) / z
     };
 }
 
-[[nodiscard]] Rect WorldToScreenRect(const Rect& wr, const Rect& viewRect, Vec2 pan, float zoom) noexcept {
+[[nodiscard]] Rect WorldToScreenRect(const Rect& wr, const Rect& viewRect, Vec2 pan, keel::f32 zoom) noexcept {
     const Vec2 tl = WorldToScreen({wr.x, wr.y}, viewRect, pan, zoom);
     return Rect(tl.x, tl.y, wr.w * zoom, wr.h * zoom);
 }
 
-[[nodiscard]] float SnapValue(float v, float step) noexcept {
+[[nodiscard]] keel::f32 SnapValue(keel::f32 v, keel::f32 step) noexcept {
     if (step <= 1.0f) return v;
     return keel::round(v / step) * step;
 }
 
 [[nodiscard]] Rect ComputeDiagramWorldBounds(const BpmnDiagram& diagram) noexcept {
     bool any = false;
-    float minX = 0.0f, minY = 0.0f, maxX = 1200.0f, maxY = 700.0f;
+    keel::f32 minX = 0.0f, minY = 0.0f, maxX = 1200.0f, maxY = 700.0f;
     auto includeRect = [&](const Rect& r) {
         if (!any) {
             minX = r.x;
@@ -591,17 +591,17 @@ void DrawVerticalRotatedHeaderText(
     return Rect(minX, minY, keel::max(200.0f, maxX - minX), keel::max(140.0f, maxY - minY));
 }
 
-void FitDiagramToViewport(const BpmnDiagram& diagram, const Rect& viewRect, float leftInset, BpmnEditorState& state) noexcept {
+void FitDiagramToViewport(const BpmnDiagram& diagram, const Rect& viewRect, keel::f32 leftInset, BpmnEditorState& state) noexcept {
     if (viewRect.w <= 80.0f || viewRect.h <= 80.0f) return;
     const Rect wb = ComputeDiagramWorldBounds(diagram);
-    const float padLeft = leftInset + 24.0f;
-    const float padRight = 24.0f;
-    const float padTop = 54.0f;
-    const float padBottom = 34.0f;
-    const float availW = keel::max(120.0f, viewRect.w - padLeft - padRight);
-    const float availH = keel::max(120.0f, viewRect.h - padTop - padBottom);
-    const float zx = availW / keel::max(100.0f, wb.w);
-    const float zy = availH / keel::max(100.0f, wb.h);
+    const keel::f32 padLeft = leftInset + 24.0f;
+    const keel::f32 padRight = 24.0f;
+    const keel::f32 padTop = 54.0f;
+    const keel::f32 padBottom = 34.0f;
+    const keel::f32 availW = keel::max(120.0f, viewRect.w - padLeft - padRight);
+    const keel::f32 availH = keel::max(120.0f, viewRect.h - padTop - padBottom);
+    const keel::f32 zx = availW / keel::max(100.0f, wb.w);
+    const keel::f32 zy = availH / keel::max(100.0f, wb.h);
     state.zoom = keel::clamp(keel::min(zx, zy), 0.35f, 1.25f);
     state.pan.x = padLeft + (availW - wb.w * state.zoom) * 0.5f - wb.x * state.zoom;
     state.pan.y = padTop + (availH - wb.h * state.zoom) * 0.5f - wb.y * state.zoom;
@@ -641,8 +641,8 @@ void ResolveAutoPorts(
     outTo = reqTo;
     const Vec2 fc = fromNode.Center();
     const Vec2 tc = toNode.Center();
-    const float dx = tc.x - fc.x;
-    const float dy = tc.y - fc.y;
+    const keel::f32 dx = tc.x - fc.x;
+    const keel::f32 dy = tc.y - fc.y;
 
     if (fromNode.type == BpmnNodeType::BoundaryEvent && outFrom == BpmnPortSide::Auto) {
         outFrom = BpmnPortSide::Bottom;
@@ -774,18 +774,18 @@ void SimplifyOrthogonalPoints(keel::SmallArray<Vec2, 32>& pts) {
     const Vec2 d1 = PortOutwardNormal(toSide);
 
     if (routingMode == BpmnRoutingMode::Bezier) {
-        const float dist = keel::hypot(p1.x - p0.x, p1.y - p0.y);
-        const float tangent = keel::clamp(dist * 0.42f, 28.0f, 150.0f);
+        const keel::f32 dist = keel::hypot(p1.x - p0.x, p1.y - p0.y);
+        const keel::f32 tangent = keel::clamp(dist * 0.42f, 28.0f, 150.0f);
         const Vec2 c0{p0.x + d0.x * tangent, p0.y + d0.y * tangent};
         const Vec2 c1{p1.x + d1.x * tangent, p1.y + d1.y * tangent};
         constexpr keel::i32 kSteps = 18;
         for (keel::i32 i = 1; i < kSteps; ++i) {
-            const float t = static_cast<float>(i) / static_cast<float>(kSteps);
-            const float u = 1.0f - t;
-            const float b0 = u * u * u;
-            const float b1 = 3.0f * u * u * t;
-            const float b2 = 3.0f * u * t * t;
-            const float b3 = t * t * t;
+            const keel::f32 t = keel::as<keel::f32>(i) / keel::as<keel::f32>(kSteps);
+            const keel::f32 u = 1.0f - t;
+            const keel::f32 b0 = u * u * u;
+            const keel::f32 b1 = 3.0f * u * u * t;
+            const keel::f32 b2 = 3.0f * u * t * t;
+            const keel::f32 b3 = t * t * t;
             pts.push_back({
                 b0 * p0.x + b1 * c0.x + b2 * c1.x + b3 * p1.x,
                 b0 * p0.y + b1 * c0.y + b2 * c1.y + b3 * p1.y
@@ -802,11 +802,11 @@ void SimplifyOrthogonalPoints(keel::SmallArray<Vec2, 32>& pts) {
             srcBox = srcBox.Union(host->Bounds());
         }
     }
-    constexpr float kBoxPad = 10.0f;
+    constexpr keel::f32 kBoxPad = 10.0f;
     srcBox = Rect(srcBox.x - kBoxPad, srcBox.y - kBoxPad, srcBox.w + kBoxPad * 2.0f, srcBox.h + kBoxPad * 2.0f);
     const Rect dstBox(toNode.pos.x - kBoxPad, toNode.pos.y - kBoxPad, toNode.size.x + kBoxPad * 2.0f, toNode.size.y + kBoxPad * 2.0f);
 
-    constexpr float kStub = 20.0f;
+    constexpr keel::f32 kStub = 20.0f;
     Vec2 s0{p0.x + d0.x * kStub, p0.y + d0.y * kStub};
     if (fromSide == BpmnPortSide::Left)   s0.x = keel::min(s0.x, srcBox.x - 4.0f);
     if (fromSide == BpmnPortSide::Right)  s0.x = keel::max(s0.x, srcBox.Right() + 4.0f);
@@ -820,10 +820,10 @@ void SimplifyOrthogonalPoints(keel::SmallArray<Vec2, 32>& pts) {
     if (toSide == BpmnPortSide::Bottom) s1.y = keel::max(s1.y, dstBox.Bottom() + 4.0f);
 
     auto segHitsRect = [](Vec2 a, Vec2 b, const Rect& r) noexcept -> bool {
-        const float minX = keel::min(a.x, b.x);
-        const float maxX = keel::max(a.x, b.x);
-        const float minY = keel::min(a.y, b.y);
-        const float maxY = keel::max(a.y, b.y);
+        const keel::f32 minX = keel::min(a.x, b.x);
+        const keel::f32 maxX = keel::max(a.x, b.x);
+        const keel::f32 minY = keel::min(a.y, b.y);
+        const keel::f32 maxY = keel::max(a.y, b.y);
         return (maxX > r.x + 0.5f && minX < r.Right() - 0.5f &&
                 maxY > r.y + 0.5f && minY < r.Bottom() - 0.5f);
     };
@@ -855,7 +855,7 @@ void SimplifyOrthogonalPoints(keel::SmallArray<Vec2, 32>& pts) {
         return true;
     };
 
-    auto adjustMidYClearOfLanes = [&](float yVal) -> float {
+    auto adjustMidYClearOfLanes = [&](keel::f32 yVal) -> keel::f32 {
         for (const auto& lane : diagram.lanes) {
             if (keel::abs(yVal - lane.rect.y) < 16.0f) return lane.rect.y - 20.0f;
             if (keel::abs(yVal - lane.rect.Bottom()) < 16.0f) return lane.rect.Bottom() - 20.0f;
@@ -876,14 +876,14 @@ void SimplifyOrthogonalPoints(keel::SmallArray<Vec2, 32>& pts) {
         } else {
             bool routed = false;
             if (facing) {
-                const keel::StaticArray<float, 5> candMidX = {
+                const keel::StaticArray<keel::f32, 5> candMidX = {
                     (s0.x + s1.x) * 0.5f,
                     s0.x,
                     s1.x,
                     srcBox.Right() + 14.0f,
                     dstBox.x - 14.0f
                 };
-                for (float mx : candMidX) {
+                for (keel::f32 mx : candMidX) {
                     if ((mx - p0.x) * d0.x >= 10.0f && (mx - p1.x) * d1.x >= 10.0f &&
                         isPathClear({s0, {mx, p0.y}, {mx, p1.y}, s1})) {
                         pts.push_back({mx, p0.y});
@@ -894,7 +894,7 @@ void SimplifyOrthogonalPoints(keel::SmallArray<Vec2, 32>& pts) {
                 }
             }
             if (!routed) {
-                const float detourY = (p1.y >= p0.y)
+                const keel::f32 detourY = (p1.y >= p0.y)
                     ? keel::max(srcBox.Bottom(), dstBox.Bottom()) + 16.0f
                     : keel::min(srcBox.y, dstBox.y) - 16.0f;
                 pts.push_back(s0);
@@ -913,7 +913,7 @@ void SimplifyOrthogonalPoints(keel::SmallArray<Vec2, 32>& pts) {
         } else {
             bool routed = false;
             if (facing) {
-                const float midY = adjustMidYClearOfLanes((s0.y + s1.y) * 0.5f);
+                const keel::f32 midY = adjustMidYClearOfLanes((s0.y + s1.y) * 0.5f);
                 if (isPathClear({s0, {p0.x, midY}, {p1.x, midY}, s1})) {
                     pts.push_back({p0.x, midY});
                     pts.push_back({p1.x, midY});
@@ -922,7 +922,7 @@ void SimplifyOrthogonalPoints(keel::SmallArray<Vec2, 32>& pts) {
             }
             if (!routed) {
                 pts.push_back(s0);
-                const keel::StaticArray<float, 6> candX = {
+                const keel::StaticArray<keel::f32, 6> candX = {
                     s1.x,
                     s0.x,
                     (srcBox.Right() + dstBox.x) * 0.5f,
@@ -931,7 +931,7 @@ void SimplifyOrthogonalPoints(keel::SmallArray<Vec2, 32>& pts) {
                     keel::min(srcBox.x, dstBox.x) - 16.0f
                 };
                 for (keel::i32 pass = 0; pass < 2 && !routed; ++pass) {
-                    for (float dx : candX) {
+                    for (keel::f32 dx : candX) {
                         if (isPathClear({s0, {dx, s0.y}, {dx, s1.y}, s1}, pass == 0)) {
                             pts.push_back({dx, s0.y});
                             pts.push_back({dx, s1.y});
@@ -942,7 +942,7 @@ void SimplifyOrthogonalPoints(keel::SmallArray<Vec2, 32>& pts) {
                     }
                 }
                 if (!routed) {
-                    const float detourX = keel::max(srcBox.Right(), dstBox.Right()) + 18.0f;
+                    const keel::f32 detourX = keel::max(srcBox.Right(), dstBox.Right()) + 18.0f;
                     pts.push_back({detourX, s0.y});
                     pts.push_back({detourX, s1.y});
                     pts.push_back(s1);
@@ -960,7 +960,7 @@ void SimplifyOrthogonalPoints(keel::SmallArray<Vec2, 32>& pts) {
         } else {
             pts.push_back(s0);
             bool routed = false;
-            const keel::StaticArray<float, 6> candMidX = {
+            const keel::StaticArray<keel::f32, 6> candMidX = {
                 (srcBox.Right() + dstBox.x) * 0.5f,
                 srcBox.Right() + 14.0f,
                 s1.x,
@@ -969,7 +969,7 @@ void SimplifyOrthogonalPoints(keel::SmallArray<Vec2, 32>& pts) {
                 keel::min(srcBox.x, dstBox.x) - 18.0f
             };
             for (keel::i32 pass = 0; pass < 2 && !routed; ++pass) {
-                for (float mx : candMidX) {
+                for (keel::f32 mx : candMidX) {
                     if ((mx - p1.x) * d1.x >= 10.0f &&
                         isPathClear({s0, {mx, s0.y}, {mx, p1.y}, s1}, pass == 0)) {
                         pts.push_back({mx, s0.y});
@@ -980,7 +980,7 @@ void SimplifyOrthogonalPoints(keel::SmallArray<Vec2, 32>& pts) {
                 }
             }
             if (!routed) {
-                const float midY = adjustMidYClearOfLanes((s0.y + p1.y) * 0.5f);
+                const keel::f32 midY = adjustMidYClearOfLanes((s0.y + p1.y) * 0.5f);
                 pts.push_back({s0.x, midY});
                 pts.push_back({s1.x, midY});
                 pts.push_back(s1);
@@ -997,7 +997,7 @@ void SimplifyOrthogonalPoints(keel::SmallArray<Vec2, 32>& pts) {
         } else {
             pts.push_back(s0);
             bool routed = false;
-            const keel::StaticArray<float, 5> candMidY = {
+            const keel::StaticArray<keel::f32, 5> candMidY = {
                 adjustMidYClearOfLanes((s0.y + s1.y) * 0.5f),
                 s1.y,
                 srcBox.Bottom() + 14.0f,
@@ -1005,7 +1005,7 @@ void SimplifyOrthogonalPoints(keel::SmallArray<Vec2, 32>& pts) {
                 keel::max(srcBox.Bottom(), dstBox.Bottom()) + 18.0f
             };
             for (keel::i32 pass = 0; pass < 2 && !routed; ++pass) {
-                for (float my : candMidY) {
+                for (keel::f32 my : candMidY) {
                     if ((my - p1.y) * d1.y >= 10.0f &&
                         isPathClear({s0, {s0.x, my}, {p1.x, my}, s1}, pass == 0)) {
                         pts.push_back({s0.x, my});
@@ -1016,7 +1016,7 @@ void SimplifyOrthogonalPoints(keel::SmallArray<Vec2, 32>& pts) {
                 }
             }
             if (!routed) {
-                const float midX = (s0.x + s1.x) * 0.5f;
+                const keel::f32 midX = (s0.x + s1.x) * 0.5f;
                 pts.push_back({midX, s0.y});
                 pts.push_back({midX, s1.y});
                 pts.push_back(s1);
@@ -1029,7 +1029,7 @@ void SimplifyOrthogonalPoints(keel::SmallArray<Vec2, 32>& pts) {
     return pts;
 }
 
-[[nodiscard]] keel::SmallArray<Vec2, 64> BuildRoundedPolyline(keel::ArrayRef<Vec2> pts, float cornerRadius) {
+[[nodiscard]] keel::SmallArray<Vec2, 64> BuildRoundedPolyline(keel::ArrayRef<Vec2> pts, keel::f32 cornerRadius) {
     if (pts.size() < 3 || cornerRadius <= 1.0f) return keel::SmallArray<Vec2, 64>(pts);
     keel::SmallArray<Vec2, 64> out;
     out.reserve(pts.size() * 4);
@@ -1040,20 +1040,20 @@ void SimplifyOrthogonalPoints(keel::SmallArray<Vec2, 32>& pts) {
         const Vec2 curr = pts[i];
         const Vec2 next = pts[i + 1];
 
-        const float dx1 = curr.x - prev.x;
-        const float dy1 = curr.y - prev.y;
-        const float len1 = keel::hypot(dx1, dy1);
+        const keel::f32 dx1 = curr.x - prev.x;
+        const keel::f32 dy1 = curr.y - prev.y;
+        const keel::f32 len1 = keel::hypot(dx1, dy1);
 
-        const float dx2 = next.x - curr.x;
-        const float dy2 = next.y - curr.y;
-        const float len2 = keel::hypot(dx2, dy2);
+        const keel::f32 dx2 = next.x - curr.x;
+        const keel::f32 dy2 = next.y - curr.y;
+        const keel::f32 len2 = keel::hypot(dx2, dy2);
 
         if (len1 < 3.0f || len2 < 3.0f) {
             out.push_back(curr);
             continue;
         }
 
-        const float r = keel::min(cornerRadius, keel::min(len1 * 0.42f, len2 * 0.42f));
+        const keel::f32 r = keel::min(cornerRadius, keel::min(len1 * 0.42f, len2 * 0.42f));
         const Vec2 u1{dx1 / len1, dy1 / len1};
         const Vec2 u2{dx2 / len2, dy2 / len2};
 
@@ -1063,8 +1063,8 @@ void SimplifyOrthogonalPoints(keel::SmallArray<Vec2, 32>& pts) {
         out.push_back(pEnter);
         constexpr keel::i32 kArcSteps = 4;
         for (keel::i32 s = 1; s < kArcSteps; ++s) {
-            const float t = static_cast<float>(s) / static_cast<float>(kArcSteps);
-            const float omt = 1.0f - t;
+            const keel::f32 t = keel::as<keel::f32>(s) / keel::as<keel::f32>(kArcSteps);
+            const keel::f32 omt = 1.0f - t;
             out.push_back({
                 omt * omt * pEnter.x + 2.0f * omt * t * curr.x + t * t * pExit.x,
                 omt * omt * pEnter.y + 2.0f * omt * t * curr.y + t * t * pExit.y
@@ -1077,26 +1077,26 @@ void SimplifyOrthogonalPoints(keel::SmallArray<Vec2, 32>& pts) {
     return out;
 }
 
-[[nodiscard]] float PointToSegmentDistanceSq(Vec2 p, Vec2 a, Vec2 b) noexcept {
-    const float vx = b.x - a.x;
-    const float vy = b.y - a.y;
-    const float lenSq = vx * vx + vy * vy;
+[[nodiscard]] keel::f32 PointToSegmentDistanceSq(Vec2 p, Vec2 a, Vec2 b) noexcept {
+    const keel::f32 vx = b.x - a.x;
+    const keel::f32 vy = b.y - a.y;
+    const keel::f32 lenSq = vx * vx + vy * vy;
     if (lenSq <= 1e-4f) {
-        const float dx = p.x - a.x;
-        const float dy = p.y - a.y;
+        const keel::f32 dx = p.x - a.x;
+        const keel::f32 dy = p.y - a.y;
         return dx * dx + dy * dy;
     }
-    const float t = keel::clamp(((p.x - a.x) * vx + (p.y - a.y) * vy) / lenSq, 0.0f, 1.0f);
-    const float projX = a.x + t * vx;
-    const float projY = a.y + t * vy;
-    const float dx = p.x - projX;
-    const float dy = p.y - projY;
+    const keel::f32 t = keel::clamp(((p.x - a.x) * vx + (p.y - a.y) * vy) / lenSq, 0.0f, 1.0f);
+    const keel::f32 projX = a.x + t * vx;
+    const keel::f32 projY = a.y + t * vy;
+    const keel::f32 dx = p.x - projX;
+    const keel::f32 dy = p.y - projY;
     return dx * dx + dy * dy;
 }
 
 [[nodiscard]] Vec2 SamplePolylineAtProgress(
     keel::ArrayRef<Vec2> pts,
-    float progress,
+    keel::f32 progress,
     Vec2* outMidpoint = nullptr,
     bool* outHorizontalSeg = nullptr
 ) noexcept {
@@ -1106,11 +1106,11 @@ void SimplifyOrthogonalPoints(keel::SmallArray<Vec2, 32>& pts) {
         if (outHorizontalSeg) *outHorizontalSeg = true;
         return pts[0];
     }
-    float totalLen = 0.0f;
+    keel::f32 totalLen = 0.0f;
     keel::usize longestIdx = 0;
-    float longestSeg = -1.0f;
+    keel::f32 longestSeg = -1.0f;
     for (keel::usize i = 0; i + 1 < pts.size(); ++i) {
-        const float seg = keel::hypot(pts[i + 1].x - pts[i].x, pts[i + 1].y - pts[i].y);
+        const keel::f32 seg = keel::hypot(pts[i + 1].x - pts[i].x, pts[i + 1].y - pts[i].y);
         totalLen += seg;
         if (seg > longestSeg) {
             longestSeg = seg;
@@ -1134,12 +1134,12 @@ void SimplifyOrthogonalPoints(keel::SmallArray<Vec2, 32>& pts) {
                             keel::abs(pts[longestIdx + 1].y - pts[longestIdx].y);
     }
 
-    const float targetDist = keel::clamp(progress, 0.0f, 1.0f) * totalLen;
-    float accum = 0.0f;
+    const keel::f32 targetDist = keel::clamp(progress, 0.0f, 1.0f) * totalLen;
+    keel::f32 accum = 0.0f;
     for (keel::usize i = 0; i + 1 < pts.size(); ++i) {
-        const float seg = keel::hypot(pts[i + 1].x - pts[i].x, pts[i + 1].y - pts[i].y);
+        const keel::f32 seg = keel::hypot(pts[i + 1].x - pts[i].x, pts[i + 1].y - pts[i].y);
         if (accum + seg >= targetDist) {
-            const float localT = (seg > 1e-4f) ? (targetDist - accum) / seg : 0.0f;
+            const keel::f32 localT = (seg > 1e-4f) ? (targetDist - accum) / seg : 0.0f;
             return {
                 pts[i].x + (pts[i + 1].x - pts[i].x) * localT,
                 pts[i].y + (pts[i + 1].y - pts[i].y) * localT
@@ -1154,16 +1154,16 @@ void SimplifyOrthogonalPoints(keel::SmallArray<Vec2, 32>& pts) {
 // Vector Drawing Primitives for BPMN 2.0 Symbols
 // ============================================================================
 
-void DrawDashedLine(ICanvas& canvas, Vec2 a, Vec2 b, Color col, float width, float dashLen, float gapLen) {
-    const float dx = b.x - a.x;
-    const float dy = b.y - a.y;
-    const float len = keel::hypot(dx, dy);
+void DrawDashedLine(ICanvas& canvas, Vec2 a, Vec2 b, Color col, keel::f32 width, keel::f32 dashLen, keel::f32 gapLen) {
+    const keel::f32 dx = b.x - a.x;
+    const keel::f32 dy = b.y - a.y;
+    const keel::f32 len = keel::hypot(dx, dy);
     if (len <= 0.5f) return;
-    const float ux = dx / len;
-    const float uy = dy / len;
-    const float step = keel::max(2.0f, dashLen + gapLen);
-    for (float d = 0.0f; d < len; d += step) {
-        const float dEnd = keel::min(len, d + dashLen);
+    const keel::f32 ux = dx / len;
+    const keel::f32 uy = dy / len;
+    const keel::f32 step = keel::max(2.0f, dashLen + gapLen);
+    for (keel::f32 d = 0.0f; d < len; d += step) {
+        const keel::f32 dEnd = keel::min(len, d + dashLen);
         canvas.DrawLine(
             {a.x + ux * d, a.y + uy * d},
             {a.x + ux * dEnd, a.y + uy * dEnd},
@@ -1173,10 +1173,10 @@ void DrawDashedLine(ICanvas& canvas, Vec2 a, Vec2 b, Color col, float width, flo
     }
 }
 
-void DrawDashedCircle(ICanvas& canvas, Vec2 center, float r, Color stroke, float strokeWidth, keel::i32 segments = 16) {
+void DrawDashedCircle(ICanvas& canvas, Vec2 center, keel::f32 r, Color stroke, keel::f32 strokeWidth, keel::i32 segments = 16) {
     for (keel::i32 i = 0; i < segments; ++i) {
-        const float a0 = (static_cast<float>(i) * keel::kTauF) / static_cast<float>(segments);
-        const float a1 = ((static_cast<float>(i) + 0.58f) * keel::kTauF) / static_cast<float>(segments);
+        const keel::f32 a0 = (keel::as<keel::f32>(i) * keel::kTauF) / keel::as<keel::f32>(segments);
+        const keel::f32 a1 = ((keel::as<keel::f32>(i) + 0.58f) * keel::kTauF) / keel::as<keel::f32>(segments);
         canvas.DrawLine(
             {center.x + keel::cos(a0) * r, center.y + keel::sin(a0) * r},
             {center.x + keel::cos(a1) * r, center.y + keel::sin(a1) * r},
@@ -1186,7 +1186,7 @@ void DrawDashedCircle(ICanvas& canvas, Vec2 center, float r, Color stroke, float
     }
 }
 
-void DrawDiamond(ICanvas& canvas, Vec2 center, float halfW, float halfH, Color fill, Color stroke, float strokeWidth) {
+void DrawDiamond(ICanvas& canvas, Vec2 center, keel::f32 halfW, keel::f32 halfH, Color fill, Color stroke, keel::f32 strokeWidth) {
     const Vec2 top{center.x, center.y - halfH};
     const Vec2 right{center.x + halfW, center.y};
     const Vec2 bottom{center.x, center.y + halfH};
@@ -1207,20 +1207,20 @@ void DrawDiamond(ICanvas& canvas, Vec2 center, float halfW, float halfH, Color f
 void DrawEventDefinitionSymbol(
     ICanvas& canvas,
     Vec2 center,
-    float radius,
+    keel::f32 radius,
     BpmnEventDefinition def,
     bool filledThrow,
     Color strokeColor,
     Color bgColor,
-    float s
+    keel::f32 s
 ) {
-    const float sw = keel::max(1.2f, 1.4f * s);
+    const keel::f32 sw = keel::max(1.2f, 1.4f * s);
     switch (def) {
         case BpmnEventDefinition::None:
             break;
         case BpmnEventDefinition::Message: {
-            const float ew = radius * 1.02f;
-            const float eh = radius * 0.70f;
+            const keel::f32 ew = radius * 1.02f;
+            const keel::f32 eh = radius * 0.70f;
             const Rect envRect(center.x - ew * 0.5f, center.y - eh * 0.5f, ew, eh);
             canvas.DrawRoundRect(
                 envRect,
@@ -1235,7 +1235,7 @@ void DrawEventDefinitionSymbol(
             break;
         }
         case BpmnEventDefinition::Timer: {
-            const float cr = radius * 0.54f;
+            const keel::f32 cr = radius * 0.54f;
             canvas.DrawRoundRect(
                 Rect(center.x - cr, center.y - cr, cr * 2.0f, cr * 2.0f),
                 cr,
@@ -1244,7 +1244,7 @@ void DrawEventDefinitionSymbol(
                 sw
             );
             for (keel::i32 i = 0; i < 4; ++i) {
-                const float ang = static_cast<float>(i) * keel::kHalfPiF;
+                const keel::f32 ang = keel::as<keel::f32>(i) * keel::kHalfPiF;
                 canvas.DrawLine(
                     {center.x + keel::cos(ang) * (cr * 0.72f), center.y + keel::sin(ang) * (cr * 0.72f)},
                     {center.x + keel::cos(ang) * cr, center.y + keel::sin(ang) * cr},
@@ -1257,7 +1257,7 @@ void DrawEventDefinitionSymbol(
             break;
         }
         case BpmnEventDefinition::Error: {
-            const float r = radius * 0.50f;
+            const keel::f32 r = radius * 0.50f;
             const Vec2 p0{center.x - r * 0.65f, center.y + r * 0.65f};
             const Vec2 p1{center.x - r * 0.15f, center.y - r * 0.65f};
             const Vec2 p2{center.x + r * 0.20f, center.y + r * 0.18f};
@@ -1268,7 +1268,7 @@ void DrawEventDefinitionSymbol(
             break;
         }
         case BpmnEventDefinition::Signal: {
-            const float r = radius * 0.50f;
+            const keel::f32 r = radius * 0.50f;
             const Vec2 p0{center.x, center.y - r};
             const Vec2 p1{center.x + r * 0.92f, center.y + r * 0.72f};
             const Vec2 p2{center.x - r * 0.92f, center.y + r * 0.72f};
@@ -1281,7 +1281,7 @@ void DrawEventDefinitionSymbol(
             break;
         }
         case BpmnEventDefinition::Escalation: {
-            const float r = radius * 0.48f;
+            const keel::f32 r = radius * 0.48f;
             const Vec2 top{center.x, center.y - r};
             const Vec2 right{center.x + r * 0.75f, center.y + r * 0.68f};
             const Vec2 mid{center.x, center.y + r * 0.15f};
@@ -1293,7 +1293,7 @@ void DrawEventDefinitionSymbol(
             break;
         }
         case BpmnEventDefinition::Terminate: {
-            const float tr = radius * 0.54f;
+            const keel::f32 tr = radius * 0.54f;
             canvas.DrawRoundRect(
                 Rect(center.x - tr, center.y - tr, tr * 2.0f, tr * 2.0f),
                 tr,
@@ -1304,9 +1304,9 @@ void DrawEventDefinitionSymbol(
     }
 }
 
-void DrawCogwheel(ICanvas& canvas, Vec2 c, float r, Color col, Color bgCol, float sw) {
+void DrawCogwheel(ICanvas& canvas, Vec2 c, keel::f32 r, Color col, Color bgCol, keel::f32 sw) {
     for (keel::i32 i = 0; i < 4; ++i) {
-        const float ang = static_cast<float>(i) * (keel::kPiF * 0.25f);
+        const keel::f32 ang = keel::as<keel::f32>(i) * (keel::kPiF * 0.25f);
         canvas.DrawLine(
             {c.x - keel::cos(ang) * r, c.y - keel::sin(ang) * r},
             {c.x + keel::cos(ang) * r, c.y + keel::sin(ang) * r},
@@ -1314,23 +1314,23 @@ void DrawCogwheel(ICanvas& canvas, Vec2 c, float r, Color col, Color bgCol, floa
             sw * 1.3f
         );
     }
-    const float outerR = r * 0.68f;
-    const float innerR = r * 0.30f;
+    const keel::f32 outerR = r * 0.68f;
+    const keel::f32 innerR = r * 0.30f;
     canvas.DrawRoundRect(Rect(c.x - outerR, c.y - outerR, outerR * 2.0f, outerR * 2.0f), outerR, bgCol, col, sw);
     canvas.DrawRoundRect(Rect(c.x - innerR, c.y - innerR, innerR * 2.0f, innerR * 2.0f), innerR, bgCol, col, sw * 0.85f);
 }
 
-void DrawTaskTypeMarker(ICanvas& canvas, Rect iconRect, BpmnTaskType taskType, Color col, Color bgCol, float s) {
+void DrawTaskTypeMarker(ICanvas& canvas, Rect iconRect, BpmnTaskType taskType, Color col, Color bgCol, keel::f32 s) {
     const Vec2 c = iconRect.Center();
-    const float r = keel::min(iconRect.w, iconRect.h) * 0.46f;
-    const float sw = keel::max(1.15f, 1.35f * s);
+    const keel::f32 r = keel::min(iconRect.w, iconRect.h) * 0.46f;
+    const keel::f32 sw = keel::max(1.15f, 1.35f * s);
 
     switch (taskType) {
         case BpmnTaskType::None:
         case BpmnTaskType::CallActivity:
             break;
         case BpmnTaskType::User: {
-            const float hr = r * 0.42f;
+            const keel::f32 hr = r * 0.42f;
             canvas.DrawRoundRect(
                 Rect(c.x - hr, c.y - r * 0.82f, hr * 2.0f, hr * 2.0f),
                 hr,
@@ -1364,7 +1364,7 @@ void DrawTaskTypeMarker(ICanvas& canvas, Rect iconRect, BpmnTaskType taskType, C
             const Rect sr(c.x - r * 0.72f, c.y - r * 0.85f, r * 1.44f, r * 1.70f);
             canvas.DrawRoundRect(sr, 2.5f * s, bgCol, col, sw);
             for (keel::i32 i = 0; i < 3; ++i) {
-                const float ly = sr.y + sr.h * (0.28f + static_cast<float>(i) * 0.22f);
+                const keel::f32 ly = sr.y + sr.h * (0.28f + keel::as<keel::f32>(i) * 0.22f);
                 canvas.DrawLine({sr.x + sr.w * 0.22f, ly}, {sr.Right() - sr.w * 0.22f, ly}, col, sw);
             }
             break;
@@ -1388,23 +1388,23 @@ void DrawTaskTypeMarker(ICanvas& canvas, Rect iconRect, BpmnTaskType taskType, C
     }
 }
 
-void DrawGatewayMarker(ICanvas& canvas, Vec2 center, float halfSize, BpmnGatewayType gwType, Color col, float s) {
-    const float sw = keel::max(1.9f, 2.4f * s);
+void DrawGatewayMarker(ICanvas& canvas, Vec2 center, keel::f32 halfSize, BpmnGatewayType gwType, Color col, keel::f32 s) {
+    const keel::f32 sw = keel::max(1.9f, 2.4f * s);
     switch (gwType) {
         case BpmnGatewayType::Exclusive: {
-            const float d = halfSize * 0.34f;
+            const keel::f32 d = halfSize * 0.34f;
             canvas.DrawLine({center.x - d, center.y - d}, {center.x + d, center.y + d}, col, sw);
             canvas.DrawLine({center.x + d, center.y - d}, {center.x - d, center.y + d}, col, sw);
             break;
         }
         case BpmnGatewayType::Parallel: {
-            const float d = halfSize * 0.42f;
+            const keel::f32 d = halfSize * 0.42f;
             canvas.DrawLine({center.x - d, center.y}, {center.x + d, center.y}, col, sw);
             canvas.DrawLine({center.x, center.y - d}, {center.x, center.y + d}, col, sw);
             break;
         }
         case BpmnGatewayType::Inclusive: {
-            const float r = halfSize * 0.40f;
+            const keel::f32 r = halfSize * 0.40f;
             canvas.DrawRoundRect(
                 Rect(center.x - r, center.y - r, r * 2.0f, r * 2.0f),
                 r,
@@ -1415,15 +1415,15 @@ void DrawGatewayMarker(ICanvas& canvas, Vec2 center, float halfSize, BpmnGateway
             break;
         }
         case BpmnGatewayType::EventBased: {
-            const float r1 = halfSize * 0.50f;
-            const float r2 = halfSize * 0.39f;
-            const float swThin = keel::max(1.1f, 1.3f * s);
+            const keel::f32 r1 = halfSize * 0.50f;
+            const keel::f32 r2 = halfSize * 0.39f;
+            const keel::f32 swThin = keel::max(1.1f, 1.3f * s);
             canvas.DrawRoundRect(Rect(center.x - r1, center.y - r1, r1 * 2.0f, r1 * 2.0f), r1, Color(0, 0, 0, 0), col, swThin);
             canvas.DrawRoundRect(Rect(center.x - r2, center.y - r2, r2 * 2.0f, r2 * 2.0f), r2, Color(0, 0, 0, 0), col, swThin);
-            const float pr = halfSize * 0.24f;
+            const keel::f32 pr = halfSize * 0.24f;
             for (keel::i32 i = 0; i < 5; ++i) {
-                const float a0 = -keel::kHalfPiF + static_cast<float>(i) * (keel::kTauF / 5.0f);
-                const float a1 = -keel::kHalfPiF + static_cast<float>((i + 1) % 5) * (keel::kTauF / 5.0f);
+                const keel::f32 a0 = -keel::kHalfPiF + keel::as<keel::f32>(i) * (keel::kTauF / 5.0f);
+                const keel::f32 a1 = -keel::kHalfPiF + keel::as<keel::f32>((i + 1) % 5) * (keel::kTauF / 5.0f);
                 canvas.DrawLine(
                     {center.x + keel::cos(a0) * pr, center.y + keel::sin(a0) * pr},
                     {center.x + keel::cos(a1) * pr, center.y + keel::sin(a1) * pr},
@@ -1455,15 +1455,15 @@ void DrawGatewayMarker(ICanvas& canvas, Vec2 center, float halfSize, BpmnGateway
     const BpmnDiagram& diagram,
     const BpmnNode& node,
     const Rect& sr,
-    float zoom,
-    float s,
-    float* outAlignX = nullptr,
-    float* outAlignY = nullptr
+    keel::f32 zoom,
+    keel::f32 s,
+    keel::f32* outAlignX = nullptr,
+    keel::f32* outAlignY = nullptr
 ) noexcept {
-    const float zs = keel::clamp(zoom, 0.42f, 2.0f) * s;
+    const keel::f32 zs = keel::clamp(zoom, 0.42f, 2.0f) * s;
     const Vec2 center = sr.Center();
-    const float offX = node.labelOffset.x * zoom;
-    const float offY = node.labelOffset.y * zoom;
+    const keel::f32 offX = node.labelOffset.x * zoom;
+    const keel::f32 offY = node.labelOffset.y * zoom;
 
     if (node.type == BpmnNodeType::BoundaryEvent) {
         if (outAlignX) *outAlignX = 0.5f;
@@ -1475,8 +1475,8 @@ void DrawGatewayMarker(ICanvas& canvas, Vec2 center, float halfSize, BpmnGateway
     const bool topBusy = HasPortConnection(diagram, node, BpmnPortSide::Top);
 
     Rect lblRect(center.x - 64.0f * zs, sr.Bottom() + 4.0f * zs, 128.0f * zs, 28.0f * zs);
-    float alignX = 0.5f;
-    float alignY = 0.0f;
+    keel::f32 alignX = 0.5f;
+    keel::f32 alignY = 0.0f;
 
     if (bottomBusy && !topBusy) {
         lblRect = Rect(center.x - 64.0f * zs, sr.y - 30.0f * zs, 128.0f * zs, 26.0f * zs);
@@ -1510,12 +1510,12 @@ void DrawGatewayMarker(ICanvas& canvas, Vec2 center, float halfSize, BpmnGateway
            type == BpmnNodeType::TextAnnotation;
 }
 
-[[nodiscard]] keel::StaticArray<Rect, 4> GetNodeResizeHandleRects(const Rect& sr, float zoom, float s) noexcept {
-    const float zs = keel::clamp(zoom, 0.35f, 2.2f) * s;
-    const float pad = 5.0f * zs;
+[[nodiscard]] keel::StaticArray<Rect, 4> GetNodeResizeHandleRects(const Rect& sr, keel::f32 zoom, keel::f32 s) noexcept {
+    const keel::f32 zs = keel::clamp(zoom, 0.35f, 2.2f) * s;
+    const keel::f32 pad = 5.0f * zs;
     const Rect outline(sr.x - pad, sr.y - pad, sr.w + pad * 2.0f, sr.h + pad * 2.0f);
-    const float hs = 6.5f * s;
-    const float hh = hs * 0.5f;
+    const keel::f32 hs = 6.5f * s;
+    const keel::f32 hh = hs * 0.5f;
     return {{
         Rect(outline.x - hh, outline.y - hh, hs, hs),             // 0: NW
         Rect(outline.Right() - hh, outline.y - hh, hs, hs),       // 1: NE
@@ -1529,17 +1529,17 @@ void DrawExternalNodeLabel(
     const BpmnDiagram& diagram,
     const BpmnNode& node,
     const Rect& sr,
-    float zoom,
-    float s,
+    keel::f32 zoom,
+    keel::f32 s,
     const BpmnPalette& pal,
     bool isNodeSelected = false,
     bool isLabelHovered = false
 ) {
     if (node.label.empty() || zoom < 0.42f) return;
-    const float zs = keel::clamp(zoom, 0.42f, 2.0f) * s;
-    const float fs = keel::clamp(11.0f * zs, 8.5f * s, 13.5f * s);
-    float alignX = 0.5f;
-    float alignY = 0.0f;
+    const keel::f32 zs = keel::clamp(zoom, 0.42f, 2.0f) * s;
+    const keel::f32 fs = keel::clamp(11.0f * zs, 8.5f * s, 13.5f * s);
+    keel::f32 alignX = 0.5f;
+    keel::f32 alignY = 0.0f;
     Rect lblRect = ComputeExternalNodeLabelScreenRect(diagram, node, sr, zoom, s, &alignX, &alignY);
 
     if (node.type == BpmnNodeType::BoundaryEvent) {
@@ -1554,7 +1554,7 @@ void DrawExternalNodeLabel(
 
     if (isLabelHovered || (isNodeSelected && (keel::abs(node.labelOffset.x) > 0.5f || keel::abs(node.labelOffset.y) > 0.5f))) {
         const Color c = isLabelHovered ? pal.selectAccent : pal.hoverAccent.WithAlpha(160);
-        const float sw = keel::max(1.0f, 1.15f * s);
+        const keel::f32 sw = keel::max(1.0f, 1.15f * s);
         DrawDashedLine(canvas, {lblRect.x, lblRect.y}, {lblRect.Right(), lblRect.y}, c, sw, 3.5f * s, 2.5f * s);
         DrawDashedLine(canvas, {lblRect.Right(), lblRect.y}, {lblRect.Right(), lblRect.Bottom()}, c, sw, 3.5f * s, 2.5f * s);
         DrawDashedLine(canvas, {lblRect.Right(), lblRect.Bottom()}, {lblRect.x, lblRect.Bottom()}, c, sw, 3.5f * s, 2.5f * s);
@@ -1567,28 +1567,28 @@ void DrawNodeVisual(
     const BpmnDiagram& diagram,
     const BpmnNode& node,
     const Rect& sr,
-    float zoom,
-    float s,
+    keel::f32 zoom,
+    keel::f32 s,
     const BpmnPalette& pal,
     bool isSelected,
     bool isHovered,
     bool simulationActive,
     bool showSlaHeatmap,
-    float animPhase,
+    keel::f32 animPhase,
     bool isLabelHovered = false,
     bool showResizeHandles = false,
     keel::i32 hoveredResizeCorner = -1
 ) {
-    const float zs = keel::clamp(zoom, 0.35f, 2.2f) * s;
+    const keel::f32 zs = keel::clamp(zoom, 0.35f, 2.2f) * s;
     const Vec2 center = sr.Center();
 
     // Optional SLA Heatmap halo on activities
     if (showSlaHeatmap && (node.type == BpmnNodeType::Task || node.type == BpmnNodeType::SubProcess)) {
-        const float slaNorm = keel::clamp((node.slaDurationMs - 100.0f) / 1400.0f, 0.0f, 1.0f);
+        const keel::f32 slaNorm = keel::clamp((node.slaDurationMs - 100.0f) / 1400.0f, 0.0f, 1.0f);
         const Color heatCol = (slaNorm > 0.66f)
             ? Color(244, 63, 94, 58)
             : ((slaNorm > 0.33f) ? Color(245, 158, 11, 52) : Color(16, 185, 129, 44));
-        const float exp = 6.0f * zs;
+        const keel::f32 exp = 6.0f * zs;
         canvas.DrawRoundRect(
             Rect(sr.x - exp, sr.y - exp, sr.w + exp * 2.0f, sr.h + exp * 2.0f),
             12.0f * zs,
@@ -1598,8 +1598,8 @@ void DrawNodeVisual(
 
     // Active Token simulation pulse
     if (node.activeTokensInside > 0) {
-        const float pad = (4.0f + 2.5f * keel::sin(animPhase * keel::kTauF)) * zs;
-        const float rad = (node.type == BpmnNodeType::StartEvent || node.type == BpmnNodeType::IntermediateEvent ||
+        const keel::f32 pad = (4.0f + 2.5f * keel::sin(animPhase * keel::kTauF)) * zs;
+        const keel::f32 rad = (node.type == BpmnNodeType::StartEvent || node.type == BpmnNodeType::IntermediateEvent ||
                            node.type == BpmnNodeType::BoundaryEvent || node.type == BpmnNodeType::EndEvent)
             ? (sr.w * 0.5f + pad)
             : 10.0f * zs;
@@ -1617,10 +1617,10 @@ void DrawNodeVisual(
         case BpmnNodeType::IntermediateEvent:
         case BpmnNodeType::BoundaryEvent:
         case BpmnNodeType::EndEvent: {
-            const float r = keel::min(sr.w, sr.h) * 0.5f;
+            const keel::f32 r = keel::min(sr.w, sr.h) * 0.5f;
             Color fill = pal.startEventFill;
             Color stroke = pal.startEventStroke;
-            float strokeW = keel::max(1.6f, 2.0f * zs);
+            keel::f32 strokeW = keel::max(1.6f, 2.0f * zs);
 
             if (node.type == BpmnNodeType::IntermediateEvent || node.type == BpmnNodeType::BoundaryEvent) {
                 fill = pal.interEventFill;
@@ -1648,7 +1648,7 @@ void DrawNodeVisual(
             } else {
                 canvas.DrawRoundRect(Rect(center.x - r, center.y - r, r * 2.0f, r * 2.0f), r, fill, stroke, strokeW);
                 if (node.type == BpmnNodeType::IntermediateEvent || node.type == BpmnNodeType::BoundaryEvent) {
-                    const float rInner = r * 0.78f;
+                    const keel::f32 rInner = r * 0.78f;
                     canvas.DrawRoundRect(
                         Rect(center.x - rInner, center.y - rInner, rInner * 2.0f, rInner * 2.0f),
                         rInner,
@@ -1666,8 +1666,8 @@ void DrawNodeVisual(
         }
 
         case BpmnNodeType::Gateway: {
-            const float hw = sr.w * 0.5f;
-            const float hh = sr.h * 0.5f;
+            const keel::f32 hw = sr.w * 0.5f;
+            const keel::f32 hh = sr.h * 0.5f;
             const Color stroke = (node.customColor.a > 0) ? node.customColor : pal.gatewayStroke;
             DrawDiamond(canvas, {center.x, center.y + 1.8f * zs}, hw, hh, pal.nodeShadow, Color(0, 0, 0, 0), 0.0f);
             DrawDiamond(canvas, center, hw, hh, pal.gatewayFill, stroke, keel::max(1.6f, 2.0f * zs));
@@ -1678,10 +1678,10 @@ void DrawNodeVisual(
 
         case BpmnNodeType::Task:
         case BpmnNodeType::SubProcess: {
-            const float rad = 10.0f * zs;
+            const keel::f32 rad = 10.0f * zs;
             const bool isCall = (node.type == BpmnNodeType::Task && node.taskType == BpmnTaskType::CallActivity);
             const bool isExpSub = (node.type == BpmnNodeType::SubProcess && node.isExpanded);
-            const float strokeW = isCall ? keel::max(2.8f, 3.6f * zs) : keel::max(1.5f, 1.9f * zs);
+            const keel::f32 strokeW = isCall ? keel::max(2.8f, 3.6f * zs) : keel::max(1.5f, 1.9f * zs);
             const Color strokeCol = (node.customColor.a > 0) ? node.customColor : pal.nodeStroke;
             const Color fillCol = isExpSub ? pal.nodeFill.WithAlpha(220) : pal.nodeFill;
 
@@ -1690,10 +1690,10 @@ void DrawNodeVisual(
             canvas.DrawRoundRect(sr, rad, fillCol, strokeCol, strokeW);
 
             if (isExpSub) {
-                const float hdrH = 26.0f * zs;
+                const keel::f32 hdrH = 26.0f * zs;
                 canvas.DrawLine({sr.x, sr.y + hdrH}, {sr.Right(), sr.y + hdrH}, strokeCol.WithAlpha(90), 1.0f * s);
                 if (!node.label.empty() && zoom >= 0.35f) {
-                    const float fs = keel::clamp(11.5f * zs, 8.5f * s, 13.5f * s);
+                    const keel::f32 fs = keel::clamp(11.5f * zs, 8.5f * s, 13.5f * s);
                     canvas.DrawTextBox(node.label, Rect(sr.x + 10.0f * zs, sr.y + 3.0f * zs, sr.w - 20.0f * zs, hdrH - 4.0f * zs), fs, pal.textPrimary, 0.5f, 0.5f);
                 }
             } else {
@@ -1705,9 +1705,9 @@ void DrawNodeVisual(
 
                 // Centered multi-line wrapped Task label (`bpmn-js` style, up to 3 lines)
                 if (!node.label.empty() && zoom >= 0.35f) {
-                    const float fs = keel::clamp(11.5f * zs, 8.5f * s, 13.5f * s);
-                    const float topPad = 14.0f * zs;
-                    const float botPad = (node.type == BpmnNodeType::SubProcess || node.parallelMultiInstance || node.loopMarker ||
+                    const keel::f32 fs = keel::clamp(11.5f * zs, 8.5f * s, 13.5f * s);
+                    const keel::f32 topPad = 14.0f * zs;
+                    const keel::f32 botPad = (node.type == BpmnNodeType::SubProcess || node.parallelMultiInstance || node.loopMarker ||
                                           (showSlaHeatmap && !node.documentation.empty()))
                         ? 18.0f * zs
                         : 10.0f * zs;
@@ -1725,17 +1725,17 @@ void DrawNodeVisual(
             if (node.activeTokensInside > 0) {
                 const Rect progBg(sr.x + 12.0f * zs, sr.Bottom() - 10.0f * zs, sr.w - 24.0f * zs, 4.0f * zs);
                 canvas.DrawRoundRect(progBg, 2.0f * zs, pal.simActiveGreen.WithAlpha(55));
-                const float fillW = progBg.w * (0.25f + 0.75f * keel::abs(keel::sin(animPhase * keel::kPiF)));
+                const keel::f32 fillW = progBg.w * (0.25f + 0.75f * keel::abs(keel::sin(animPhase * keel::kPiF)));
                 canvas.DrawRoundRect(Rect(progBg.x, progBg.y, fillW, progBg.h), 2.0f * zs, pal.simActiveGreen);
             } else if (showSlaHeatmap && !node.documentation.empty() && zoom >= 0.55f && node.type == BpmnNodeType::Task && !node.parallelMultiInstance && !node.loopMarker) {
-                const float subFs = keel::clamp(9.0f * zs, 7.5f * s, 10.5f * s);
+                const keel::f32 subFs = keel::clamp(9.0f * zs, 7.5f * s, 10.5f * s);
                 const Rect subRect(sr.x + 8.0f * zs, sr.Bottom() - 15.0f * zs, sr.w - 16.0f * zs, 12.0f * zs);
                 canvas.DrawTextBox(node.documentation, subRect, subFs, pal.textMuted, 0.5f, 0.5f);
             }
 
             // SubProcess [+]/[-] marker or Loop / Parallel Multi-Instance markers at bottom center
             if (node.type == BpmnNodeType::SubProcess) {
-                const float ms = 13.0f * zs;
+                const keel::f32 ms = 13.0f * zs;
                 const Rect mr(center.x - ms * 0.5f, sr.Bottom() - ms - 3.5f * zs, ms, ms);
                 canvas.DrawRoundRect(mr, 2.0f * zs, pal.nodeFill, strokeCol, keel::max(1.1f, 1.3f * zs));
                 const Vec2 mc = mr.Center();
@@ -1744,14 +1744,14 @@ void DrawNodeVisual(
                     canvas.DrawLine({mc.x, mc.y - ms * 0.28f}, {mc.x, mc.y + ms * 0.28f}, strokeCol, keel::max(1.1f, 1.35f * zs));
                 }
             } else if (node.parallelMultiInstance) {
-                const float mh = 9.0f * zs;
-                const float my = sr.Bottom() - mh - 4.0f * zs;
+                const keel::f32 mh = 9.0f * zs;
+                const keel::f32 my = sr.Bottom() - mh - 4.0f * zs;
                 for (keel::i32 i = -1; i <= 1; ++i) {
-                    const float mx = center.x + static_cast<float>(i) * 3.5f * zs;
+                    const keel::f32 mx = center.x + keel::as<keel::f32>(i) * 3.5f * zs;
                     canvas.DrawLine({mx, my}, {mx, my + mh}, strokeCol, keel::max(1.2f, 1.45f * zs));
                 }
             } else if (node.loopMarker) {
-                const float lr = 4.5f * zs;
+                const keel::f32 lr = 4.5f * zs;
                 const Vec2 lc{center.x, sr.Bottom() - lr - 4.0f * zs};
                 canvas.DrawRoundRect(Rect(lc.x - lr, lc.y - lr, lr * 2.0f, lr * 2.0f), lr, Color(0, 0, 0, 0), strokeCol, keel::max(1.1f, 1.35f * zs));
             }
@@ -1759,8 +1759,8 @@ void DrawNodeVisual(
         }
 
         case BpmnNodeType::DataObject: {
-            const float fold = keel::min(sr.w, sr.h) * 0.26f;
-            const float sw = keel::max(1.3f, 1.6f * zs);
+            const keel::f32 fold = keel::min(sr.w, sr.h) * 0.26f;
+            const keel::f32 sw = keel::max(1.3f, 1.6f * zs);
             canvas.DrawRoundRect(sr, 2.0f * zs, pal.dataFill, pal.nodeStroke, sw);
             canvas.DrawLine({sr.Right() - fold, sr.y}, {sr.Right() - fold, sr.y + fold}, pal.nodeStroke, sw);
             canvas.DrawLine({sr.Right() - fold, sr.y + fold}, {sr.Right(), sr.y + fold}, pal.nodeStroke, sw);
@@ -1769,8 +1769,8 @@ void DrawNodeVisual(
         }
 
         case BpmnNodeType::DataStore: {
-            const float sw = keel::max(1.3f, 1.6f * zs);
-            const float capH = sr.h * 0.28f;
+            const keel::f32 sw = keel::max(1.3f, 1.6f * zs);
+            const keel::f32 capH = sr.h * 0.28f;
             canvas.DrawRoundRect(sr, 6.0f * zs, pal.dataFill, pal.nodeStroke, sw);
             canvas.DrawRoundRect(Rect(sr.x, sr.y, sr.w, capH), capH * 0.5f, pal.laneHeaderBg, pal.nodeStroke, sw);
             canvas.DrawLine({sr.x, sr.y + capH * 1.45f}, {sr.Right(), sr.y + capH * 1.45f}, pal.nodeStroke.WithAlpha(160), sw * 0.85f);
@@ -1779,13 +1779,13 @@ void DrawNodeVisual(
         }
 
         case BpmnNodeType::TextAnnotation: {
-            const float sw = keel::max(1.4f, 1.8f * zs);
-            const float bw = 10.0f * zs;
+            const keel::f32 sw = keel::max(1.4f, 1.8f * zs);
+            const keel::f32 bw = 10.0f * zs;
             canvas.DrawLine({sr.x + bw, sr.y}, {sr.x, sr.y}, pal.nodeStroke, sw);
             canvas.DrawLine({sr.x, sr.y}, {sr.x, sr.Bottom()}, pal.nodeStroke, sw);
             canvas.DrawLine({sr.x, sr.Bottom()}, {sr.x + bw, sr.Bottom()}, pal.nodeStroke, sw);
             if (!node.label.empty() && zoom >= 0.38f) {
-                const float fs = keel::clamp(10.5f * zs, 8.0f * s, 12.5f * s);
+                const keel::f32 fs = keel::clamp(10.5f * zs, 8.0f * s, 12.5f * s);
                 const Rect tr(sr.x + 8.0f * zs, sr.y + 2.0f * zs, keel::max(8.0f, sr.w - 10.0f * zs), keel::max(8.0f, sr.h - 4.0f * zs));
                 DrawWrappedTextBox(canvas, node.label, tr, fs, pal.textSecondary, FontStyle::Regular, 0.0f, 0.5f, 3);
             }
@@ -1795,7 +1795,7 @@ void DrawNodeVisual(
 
     // Authentic `bpmn-js` / `diagram-js` rectangular `djs-outline` bounding box on selection or hover
     if (isSelected || isHovered) {
-        const float pad = 5.0f * zs;
+        const keel::f32 pad = 5.0f * zs;
         const Rect outlineRect(sr.x - pad, sr.y - pad, sr.w + pad * 2.0f, sr.h + pad * 2.0f);
         if (isSelected) {
             canvas.DrawRoundRect(
@@ -1810,7 +1810,7 @@ void DrawNodeVisual(
                 for (keel::i32 c = 0; c < 4; ++c) {
                     const bool isCornerHov = (hoveredResizeCorner == c);
                     canvas.DrawRoundRect(
-                        handles[static_cast<keel::usize>(c)],
+                        handles[keel::as<keel::usize>(c)],
                         1.5f * s,
                         isCornerHov ? pal.selectAccent : pal.nodeFill,
                         pal.selectAccent,
@@ -1819,7 +1819,7 @@ void DrawNodeVisual(
                 }
             }
         } else {
-            const float osw = keel::max(1.1f, 1.3f * s);
+            const keel::f32 osw = keel::max(1.1f, 1.3f * s);
             DrawDashedLine(canvas, {outlineRect.x, outlineRect.y}, {outlineRect.Right(), outlineRect.y}, pal.hoverAccent, osw, 4.0f * s, 3.0f * s);
             DrawDashedLine(canvas, {outlineRect.Right(), outlineRect.y}, {outlineRect.Right(), outlineRect.Bottom()}, pal.hoverAccent, osw, 4.0f * s, 3.0f * s);
             DrawDashedLine(canvas, {outlineRect.Right(), outlineRect.Bottom()}, {outlineRect.x, outlineRect.Bottom()}, pal.hoverAccent, osw, 4.0f * s, 3.0f * s);
@@ -1831,9 +1831,9 @@ void DrawNodeVisual(
     if (simulationActive && (node.tokenExecutionCount > 0 || node.activeTokensInside > 0) && zoom >= 0.45f) {
         char buf[32];
         const keel::StringRef badgeStr = keel::format_buf(buf, "%u", node.tokenExecutionCount + node.activeTokensInside);
-        const float bFs = keel::clamp(9.5f * zs, 8.0f * s, 11.5f * s);
-        const float bw = keel::max(18.0f * zs, canvas.MeasureText(badgeStr, bFs).x + 8.0f * zs);
-        const float bh = 16.0f * zs;
+        const keel::f32 bFs = keel::clamp(9.5f * zs, 8.0f * s, 11.5f * s);
+        const keel::f32 bw = keel::max(18.0f * zs, canvas.MeasureText(badgeStr, bFs).x + 8.0f * zs);
+        const keel::f32 bh = 16.0f * zs;
         const Rect badgeRect(sr.Right() - bw * 0.65f, sr.y - bh * 0.45f, bw, bh);
         const Color badgeBg = (node.activeTokensInside > 0) ? pal.simActiveGreen : pal.selectAccent;
         canvas.DrawRoundRect(badgeRect, bh * 0.5f, badgeBg, pal.canvasBg, 1.2f * s);
@@ -1845,20 +1845,20 @@ void DrawNodeVisual(
     ICanvas* canvas,
     keel::ArrayRef<Vec2> rawScreenPts,
     const BpmnEdge& edge,
-    float zoom,
-    float s
+    keel::f32 zoom,
+    keel::f32 s
 ) noexcept {
     if (edge.label.empty() || rawScreenPts.size() < 2) return Rect{};
-    const float zs = keel::clamp(zoom, 0.4f, 2.0f) * s;
+    const keel::f32 zs = keel::clamp(zoom, 0.4f, 2.0f) * s;
     Vec2 mid{0.0f, 0.0f};
     bool isHorizSeg = true;
     (void)SamplePolylineAtProgress(rawScreenPts, 0.5f, &mid, &isHorizSeg);
-    const float fs = keel::clamp(10.2f * zs, 8.0f * s, 12.5f * s);
+    const keel::f32 fs = keel::clamp(10.2f * zs, 8.0f * s, 12.5f * s);
     const Vec2 tm = canvas
         ? canvas->MeasureText(edge.label, fs)
-        : Vec2{static_cast<float>(edge.label.size()) * fs * 0.56f, fs * 1.2f};
-    const float labelX = mid.x + edge.labelOffset.x * zoom;
-    const float labelY = (isHorizSeg ? (mid.y - tm.y * 0.5f - 10.5f * zs) : mid.y) + edge.labelOffset.y * zoom;
+        : Vec2{keel::as<keel::f32>(edge.label.size()) * fs * 0.56f, fs * 1.2f};
+    const keel::f32 labelX = mid.x + edge.labelOffset.x * zoom;
+    const keel::f32 labelY = (isHorizSeg ? (mid.y - tm.y * 0.5f - 10.5f * zs) : mid.y) + edge.labelOffset.y * zoom;
     return Rect(
         labelX - tm.x * 0.5f - 4.5f * zs,
         labelY - tm.y * 0.5f - 2.0f * zs,
@@ -1872,8 +1872,8 @@ void DrawEdgeVisual(
     keel::ArrayRef<Vec2> rawScreenPts,
     const BpmnEdge& edge,
     BpmnRoutingMode routingMode,
-    float zoom,
-    float s,
+    keel::f32 zoom,
+    keel::f32 s,
     const BpmnPalette& pal,
     bool isSelected,
     bool isHovered,
@@ -1883,13 +1883,13 @@ void DrawEdgeVisual(
     bool isLabelHovered = false
 ) {
     if (rawScreenPts.size() < 2) return;
-    const float zs = keel::clamp(zoom, 0.4f, 2.0f) * s;
+    const keel::f32 zs = keel::clamp(zoom, 0.4f, 2.0f) * s;
     Color col = (edge.flowType == BpmnFlowType::MessageFlow) ? pal.edgeMessage : pal.edgeStroke;
     if (isSimActiveBranch) col = pal.simActiveGreen;
     if (isHovered) col = pal.hoverAccent;
     if (isSelected) col = pal.selectAccent;
 
-    const float sw = (isSelected || isHovered || isSimActiveBranch)
+    const keel::f32 sw = (isSelected || isHovered || isSimActiveBranch)
         ? keel::max(2.0f, 2.3f * zs)
         : keel::max(1.5f, 1.8f * zs);
 
@@ -1926,14 +1926,14 @@ void DrawEdgeVisual(
     // Source decorators (Default slash `\`, Conditional mini-diamond, Message open circle)
     const Vec2 p0 = rawScreenPts.front();
     const Vec2 pNext = rawScreenPts[1];
-    const float sdx = pNext.x - p0.x;
-    const float sdy = pNext.y - p0.y;
-    const float slen = keel::hypot(sdx, sdy);
+    const keel::f32 sdx = pNext.x - p0.x;
+    const keel::f32 sdy = pNext.y - p0.y;
+    const keel::f32 slen = keel::hypot(sdx, sdy);
     if (slen > 4.0f) {
-        const float ux = sdx / slen;
-        const float uy = sdy / slen;
-        const float nx = -uy;
-        const float ny = ux;
+        const keel::f32 ux = sdx / slen;
+        const keel::f32 uy = sdy / slen;
+        const keel::f32 nx = -uy;
+        const keel::f32 ny = ux;
         if (edge.flowType == BpmnFlowType::DefaultFlow) {
             const Vec2 tc{p0.x + ux * 10.5f * zs, p0.y + uy * 10.5f * zs};
             canvas.DrawLine(
@@ -1946,7 +1946,7 @@ void DrawEdgeVisual(
             const Vec2 dc{p0.x + ux * 7.5f * zs, p0.y + uy * 7.5f * zs};
             DrawDiamond(canvas, dc, 5.5f * zs, 4.0f * zs, pal.nodeFill, col, sw);
         } else if (edge.flowType == BpmnFlowType::MessageFlow) {
-            const float mr = 4.0f * zs;
+            const keel::f32 mr = 4.0f * zs;
             canvas.DrawRoundRect(Rect(p0.x - mr, p0.y - mr, mr * 2.0f, mr * 2.0f), mr, pal.nodeFill, col, sw);
         }
     }
@@ -1955,16 +1955,16 @@ void DrawEdgeVisual(
     if (edge.flowType != BpmnFlowType::Association) {
         const Vec2 tip = rawScreenPts.back();
         const Vec2 prev = rawScreenPts[rawScreenPts.size() - 2];
-        const float dx = tip.x - prev.x;
-        const float dy = tip.y - prev.y;
-        const float len = keel::hypot(dx, dy);
+        const keel::f32 dx = tip.x - prev.x;
+        const keel::f32 dy = tip.y - prev.y;
+        const keel::f32 len = keel::hypot(dx, dy);
         if (len > 1.0f) {
-            const float ux = dx / len;
-            const float uy = dy / len;
-            const float nx = -uy;
-            const float ny = ux;
-            const float al = 9.0f * zs;
-            const float aw = 4.6f * zs;
+            const keel::f32 ux = dx / len;
+            const keel::f32 uy = dy / len;
+            const keel::f32 nx = -uy;
+            const keel::f32 ny = ux;
+            const keel::f32 al = 9.0f * zs;
+            const keel::f32 aw = 4.6f * zs;
             const Vec2 b1{tip.x - ux * al + nx * aw, tip.y - uy * al + ny * aw};
             const Vec2 b2{tip.x - ux * al - nx * aw, tip.y - uy * al - ny * aw};
             canvas.DrawTriangle(
@@ -1981,13 +1981,13 @@ void DrawEdgeVisual(
         for (keel::usize i = 0; i + 1 < rawScreenPts.size(); ++i) {
             const Vec2 a = rawScreenPts[i];
             const Vec2 b = rawScreenPts[i + 1];
-            const float segLen = keel::hypot(b.x - a.x, b.y - a.y);
+            const keel::f32 segLen = keel::hypot(b.x - a.x, b.y - a.y);
             if (segLen < 22.0f * s) continue;
             const bool isHoriz = keel::abs(b.x - a.x) >= keel::abs(b.y - a.y);
             const Vec2 mid{(a.x + b.x) * 0.5f, (a.y + b.y) * 0.5f};
-            const float hw = isHoriz ? 7.0f * s : 3.2f * s;
-            const float hh = isHoriz ? 3.2f * s : 7.0f * s;
-            const bool isSegHov = (hoveredSegIdx == static_cast<keel::i32>(i));
+            const keel::f32 hw = isHoriz ? 7.0f * s : 3.2f * s;
+            const keel::f32 hh = isHoriz ? 3.2f * s : 7.0f * s;
+            const bool isSegHov = (hoveredSegIdx == keel::as<keel::i32>(i));
             const Rect pillR(mid.x - hw, mid.y - hh, hw * 2.0f, hh * 2.0f);
             canvas.DrawRoundRect(
                 pillR,
@@ -1999,7 +1999,7 @@ void DrawEdgeVisual(
         }
     }
     if (isSelected) {
-        const float er = 4.5f * s;
+        const keel::f32 er = 4.5f * s;
         const Vec2 ep0 = rawScreenPts.front();
         const Vec2 ep1 = rawScreenPts.back();
         canvas.DrawRoundRect(
@@ -2020,7 +2020,7 @@ void DrawEdgeVisual(
 
     // Clean `bpmn-js` Edge Label placement (above horizontal segments so the wire stays unbroken, or knockout halo on vertical segments)
     if (!edge.label.empty() && zoom >= 0.45f) {
-        const float fs = keel::clamp(10.2f * zs, 8.0f * s, 12.5f * s);
+        const keel::f32 fs = keel::clamp(10.2f * zs, 8.0f * s, 12.5f * s);
         const Rect pill = ComputeEdgeLabelScreenRect(&canvas, rawScreenPts, edge, zoom, s);
         canvas.DrawRoundRect(
             pill,
@@ -2091,9 +2091,9 @@ inline constexpr keel::StaticArray<keel::StringRef, 8> kContextPadTooltips = {{
     }
 }
 
-void DrawContextPadButtonIcon(ICanvas& canvas, Rect r, keel::i32 btnIdx, Color col, const BpmnPalette& pal, float s) {
+void DrawContextPadButtonIcon(ICanvas& canvas, Rect r, keel::i32 btnIdx, Color col, const BpmnPalette& pal, keel::f32 s) {
     const Vec2 c = r.Center();
-    const float sw = keel::max(1.25f, 1.45f * s);
+    const keel::f32 sw = keel::max(1.25f, 1.45f * s);
     switch (btnIdx) {
         case 0: { // Append Task (rounded rectangle)
             canvas.DrawRoundRect(Rect(c.x - 6.8f * s, c.y - 4.8f * s, 13.6f * s, 9.6f * s), 2.4f * s, Color(0, 0, 0, 0), col, sw);
@@ -2104,13 +2104,13 @@ void DrawContextPadButtonIcon(ICanvas& canvas, Rect r, keel::i32 btnIdx, Color c
             break;
         }
         case 2: { // Append EndEvent (thick circle)
-            const float rad = 5.8f * s;
+            const keel::f32 rad = 5.8f * s;
             canvas.DrawRoundRect(Rect(c.x - rad, c.y - rad, rad * 2.0f, rad * 2.0f), rad, Color(0, 0, 0, 0), pal.endEventStroke, sw * 1.85f);
             break;
         }
         case 3: { // Append IntermediateEvent (concentric double circle)
-            const float r1 = 6.0f * s;
-            const float r2 = 4.0f * s;
+            const keel::f32 r1 = 6.0f * s;
+            const keel::f32 r2 = 4.0f * s;
             canvas.DrawRoundRect(Rect(c.x - r1, c.y - r1, r1 * 2.0f, r1 * 2.0f), r1, Color(0, 0, 0, 0), pal.interEventStroke, sw);
             canvas.DrawRoundRect(Rect(c.x - r2, c.y - r2, r2 * 2.0f, r2 * 2.0f), r2, Color(0, 0, 0, 0), pal.interEventStroke, sw * 0.85f);
             break;
@@ -2132,7 +2132,7 @@ void DrawContextPadButtonIcon(ICanvas& canvas, Rect r, keel::i32 btnIdx, Color c
             const Vec2 head{c.x + 2.5f * s, c.y - 2.5f * s};
             const Vec2 tail{c.x - 5.2f * s, c.y + 5.2f * s};
             canvas.DrawLine({c.x + 0.5f * s, c.y - 0.5f * s}, tail, col, sw * 1.45f);
-            const float hr = 3.6f * s;
+            const keel::f32 hr = 3.6f * s;
             canvas.DrawRoundRect(Rect(head.x - hr, head.y - hr, hr * 2.0f, hr * 2.0f), hr, Color(0, 0, 0, 0), col, sw * 1.15f);
             canvas.DrawRoundRect(Rect(tail.x - 1.6f * s, tail.y - 1.6f * s, 3.2f * s, 3.2f * s), 1.6f * s, col);
             break;
@@ -2157,9 +2157,9 @@ void DrawContextPadButtonIcon(ICanvas& canvas, Rect r, keel::i32 btnIdx, Color c
     }
 }
 
-void DrawPaletteButtonIcon(ICanvas& canvas, Rect r, BpmnTool tool, Color col, const BpmnPalette& pal, float s) {
+void DrawPaletteButtonIcon(ICanvas& canvas, Rect r, BpmnTool tool, Color col, const BpmnPalette& pal, keel::f32 s) {
     const Vec2 c = r.Center();
-    const float sw = keel::max(1.25f, 1.45f * s);
+    const keel::f32 sw = keel::max(1.25f, 1.45f * s);
     switch (tool) {
         case BpmnTool::Select: {
             const Vec2 p0{c.x - 4.5f * s, c.y - 6.0f * s};
@@ -2172,7 +2172,7 @@ void DrawPaletteButtonIcon(ICanvas& canvas, Rect r, BpmnTool tool, Color col, co
             const Rect palm(c.x - 5.0f * s, c.y - 2.0f * s, 10.0f * s, 8.0f * s);
             canvas.DrawRoundRect(palm, 2.5f * s, Color(0, 0, 0, 0), col, sw);
             for (keel::i32 i = -1; i <= 1; ++i) {
-                const float fx = c.x + static_cast<float>(i) * 3.0f * s;
+                const keel::f32 fx = c.x + keel::as<keel::f32>(i) * 3.0f * s;
                 canvas.DrawLine({fx, c.y - 6.5f * s}, {fx, c.y - 2.0f * s}, col, sw);
             }
             break;
@@ -2201,19 +2201,19 @@ void DrawPaletteButtonIcon(ICanvas& canvas, Rect r, BpmnTool tool, Color col, co
             break;
         }
         case BpmnTool::CreateStartEvent: {
-            const float rad = 6.5f * s;
+            const keel::f32 rad = 6.5f * s;
             canvas.DrawRoundRect(Rect(c.x - rad, c.y - rad, rad * 2.0f, rad * 2.0f), rad, Color(0, 0, 0, 0), pal.startEventStroke, sw * 1.15f);
             break;
         }
         case BpmnTool::CreateIntermediateEvent: {
-            const float r1 = 6.8f * s;
-            const float r2 = 4.6f * s;
+            const keel::f32 r1 = 6.8f * s;
+            const keel::f32 r2 = 4.6f * s;
             canvas.DrawRoundRect(Rect(c.x - r1, c.y - r1, r1 * 2.0f, r1 * 2.0f), r1, Color(0, 0, 0, 0), pal.interEventStroke, sw);
             canvas.DrawRoundRect(Rect(c.x - r2, c.y - r2, r2 * 2.0f, r2 * 2.0f), r2, Color(0, 0, 0, 0), pal.interEventStroke, sw * 0.85f);
             break;
         }
         case BpmnTool::CreateEndEvent: {
-            const float rad = 6.5f * s;
+            const keel::f32 rad = 6.5f * s;
             canvas.DrawRoundRect(Rect(c.x - rad, c.y - rad, rad * 2.0f, rad * 2.0f), rad, Color(0, 0, 0, 0), pal.endEventStroke, sw * 1.9f);
             break;
         }
@@ -2262,27 +2262,27 @@ void DrawPaletteButtonIcon(ICanvas& canvas, Rect r, BpmnTool tool, Color col, co
     }
 }
 
-[[nodiscard]] Rect ComputeLeftPaletteRect(const Rect& viewRect, bool showTopBar, float s) noexcept {
-    const float x = viewRect.x + 12.0f * s;
-    const float y = viewRect.y + (showTopBar ? 50.0f : 12.0f) * s;
-    const float w = 42.0f * s;
-    const float h = keel::min(keel::max(120.0f, viewRect.h - (y - viewRect.y) - 52.0f * s), 462.0f * s);
+[[nodiscard]] Rect ComputeLeftPaletteRect(const Rect& viewRect, bool showTopBar, keel::f32 s) noexcept {
+    const keel::f32 x = viewRect.x + 12.0f * s;
+    const keel::f32 y = viewRect.y + (showTopBar ? 50.0f : 12.0f) * s;
+    const keel::f32 w = 42.0f * s;
+    const keel::f32 h = keel::min(keel::max(120.0f, viewRect.h - (y - viewRect.y) - 52.0f * s), 462.0f * s);
     return Rect(x, y, w, h);
 }
 
-[[nodiscard]] Rect ComputeTopBarRect(const Rect& viewRect, float s) noexcept {
+[[nodiscard]] Rect ComputeTopBarRect(const Rect& viewRect, keel::f32 s) noexcept {
     return Rect(viewRect.x + 12.0f * s, viewRect.y + 10.0f * s, keel::max(200.0f, viewRect.w - 24.0f * s), 32.0f * s);
 }
 
-[[nodiscard]] Rect ComputeMinimapRect(const Rect& viewRect, float s) noexcept {
-    const float mw = 188.0f * s;
-    const float mh = 116.0f * s;
+[[nodiscard]] Rect ComputeMinimapRect(const Rect& viewRect, keel::f32 s) noexcept {
+    const keel::f32 mw = 188.0f * s;
+    const keel::f32 mh = 116.0f * s;
     return Rect(viewRect.Right() - mw - 12.0f * s, viewRect.Bottom() - mh - 12.0f * s, mw, mh);
 }
 
-[[nodiscard]] Rect ComputeZoomHudRect(const Rect& viewRect, float s) noexcept {
-    const float zw = 178.0f * s;
-    const float zh = 28.0f * s;
+[[nodiscard]] Rect ComputeZoomHudRect(const Rect& viewRect, keel::f32 s) noexcept {
+    const keel::f32 zw = 178.0f * s;
+    const keel::f32 zh = 28.0f * s;
     return Rect(viewRect.x + 12.0f * s, viewRect.Bottom() - zh - 12.0f * s, zw, zh);
 }
 
@@ -2317,9 +2317,9 @@ void SpawnTokenFromStartEvent(BpmnDiagram& diagram, const BpmnNode& startNode, B
     }
 }
 
-void StepTokenSimulation(BpmnDiagram& diagram, BpmnEditorState& state, float dtSec, float speedMultiplier, bool autoSpawn) {
+void StepTokenSimulation(BpmnDiagram& diagram, BpmnEditorState& state, keel::f32 dtSec, keel::f32 speedMultiplier, bool autoSpawn) {
     if (state.simPaused) return;
-    const float dt = keel::clamp(dtSec, 0.001f, 0.12f) * keel::clamp(speedMultiplier, 0.2f, 4.0f);
+    const keel::f32 dt = keel::clamp(dtSec, 0.001f, 0.12f) * keel::clamp(speedMultiplier, 0.2f, 4.0f);
 
     if (autoSpawn && diagram.tokens.size() < 24) {
         state.spawnCooldownSec -= dt;
@@ -2408,7 +2408,7 @@ void StepTokenSimulation(BpmnDiagram& diagram, BpmnEditorState& state, float dtS
                 removeIndices.push_back(i);
                 continue;
             }
-            const float dwellSec = keel::clamp(host->slaDurationMs / 1000.0f, 0.25f, 2.0f);
+            const keel::f32 dwellSec = keel::clamp(host->slaDurationMs / 1000.0f, 0.25f, 2.0f);
             tok.progress += dt / dwellSec;
             if (tok.progress >= 1.0f) {
                 host->tokenExecutionCount++;
@@ -2464,42 +2464,42 @@ void RenderBpmnEditorNode(const Node* node, ICanvas& canvas, const UiTheme& them
     const BpmnEditorOptions& opts = payload->opts;
     const BpmnDiagram& diagram = *payload->diagramSnapshot;
     const BpmnEditorState& state = *payload->stateSnapshot;
-    constexpr float s = 1.0f;
+    constexpr keel::f32 s = 1.0f;
 
     const Rect viewRect = node->computedRect;
     if (viewRect.w <= 2.0f || viewRect.h <= 2.0f) return;
 
     const BpmnPalette pal = ResolveBpmnPalette(opts.themePreset, theme);
-    const float radius = opts.border.radius.value_or(8.0f) * s;
+    const keel::f32 radius = opts.border.radius.value_or(8.0f) * s;
     const Color canvasBg = opts.background.Resolve(node->hovered, node->pressed, node->disabled, pal.canvasBg);
     const Color canvasBorder = opts.border.color.Resolve(node->hovered, node->pressed, node->disabled, pal.canvasBorder);
-    const float borderW = (opts.border.width > 0.0f) ? keel::max(1.0f, opts.border.width * s) : (1.0f * s);
+    const keel::f32 borderW = (opts.border.width > 0.0f) ? keel::max(1.0f, opts.border.width * s) : (1.0f * s);
 
     // 1. Canvas Background & Border
     canvas.DrawRoundRect(viewRect, radius, canvasBg, canvasBorder, borderW);
     canvas.PushClip(viewRect);
 
     const Vec2 pan = state.pan;
-    const float zoom = state.zoom;
-    const float zs = keel::clamp(zoom, 0.35f, 2.2f) * s;
+    const keel::f32 zoom = state.zoom;
+    const keel::f32 zs = keel::clamp(zoom, 0.35f, 2.2f) * s;
 
     // 2. World Grid
     if (opts.showGrid && opts.gridStep >= 8.0f) {
-        const float screenStep = opts.gridStep * zoom;
+        const keel::f32 screenStep = opts.gridStep * zoom;
         if (screenStep >= 9.0f) {
             const Vec2 wTL = ScreenToWorld({viewRect.x, viewRect.y}, viewRect, pan, zoom);
             const Vec2 wBR = ScreenToWorld({viewRect.Right(), viewRect.Bottom()}, viewRect, pan, zoom);
-            const float startX = keel::floor(wTL.x / opts.gridStep) * opts.gridStep;
-            const float startY = keel::floor(wTL.y / opts.gridStep) * opts.gridStep;
-            const keel::i32 maxCols = static_cast<keel::i32>((wBR.x - startX) / opts.gridStep) + 2;
-            const keel::i32 maxRows = static_cast<keel::i32>((wBR.y - startY) / opts.gridStep) + 2;
+            const keel::f32 startX = keel::floor(wTL.x / opts.gridStep) * opts.gridStep;
+            const keel::f32 startY = keel::floor(wTL.y / opts.gridStep) * opts.gridStep;
+            const keel::i32 maxCols = keel::as<keel::i32>((wBR.x - startX) / opts.gridStep) + 2;
+            const keel::i32 maxRows = keel::as<keel::i32>((wBR.y - startY) / opts.gridStep) + 2;
             if (maxCols * maxRows <= 6500) {
                 for (keel::i32 r = 0; r < maxRows; ++r) {
-                    const float wy = startY + static_cast<float>(r) * opts.gridStep;
-                    const float sy = viewRect.y + pan.y + wy * zoom;
+                    const keel::f32 wy = startY + keel::as<keel::f32>(r) * opts.gridStep;
+                    const keel::f32 sy = viewRect.y + pan.y + wy * zoom;
                     for (keel::i32 c = 0; c < maxCols; ++c) {
-                        const float wx = startX + static_cast<float>(c) * opts.gridStep;
-                        const float sx = viewRect.x + pan.x + wx * zoom;
+                        const keel::f32 wx = startX + keel::as<keel::f32>(c) * opts.gridStep;
+                        const keel::f32 sx = viewRect.x + pan.x + wx * zoom;
                         canvas.DrawRect(Rect(sx - 0.8f * s, sy - 0.8f * s, 1.6f * s, 1.6f * s), pal.gridDot);
                     }
                 }
@@ -2508,8 +2508,8 @@ void RenderBpmnEditorNode(const Node* node, ICanvas& canvas, const UiTheme& them
     }
 
     // 3. Swimlanes & Participant Pools (`BpmnLane`) - Authentic `bpmn.io` Two-Column Vertical Header Strip
-    const float poolStripW = keel::clamp(28.0f * zs, 18.0f * s, 36.0f * s);
-    const float laneStripW = keel::clamp(28.0f * zs, 18.0f * s, 36.0f * s);
+    const keel::f32 poolStripW = keel::clamp(28.0f * zs, 18.0f * s, 36.0f * s);
+    const keel::f32 laneStripW = keel::clamp(28.0f * zs, 18.0f * s, 36.0f * s);
 
     // Draw individual lane bands and vertical lane headers first
     for (keel::usize i = 0; i < diagram.lanes.size(); ++i) {
@@ -2519,13 +2519,13 @@ void RenderBpmnEditorNode(const Node* node, ICanvas& canvas, const UiTheme& them
             continue;
         }
         const bool hasPool = !lane.poolName.empty();
-        const float leftOffset = hasPool ? poolStripW : 0.0f;
+        const keel::f32 leftOffset = hasPool ? poolStripW : 0.0f;
 
         const bool isLaneSel = (state.selectedLaneId == lane.id);
         const bool isLaneHov = (state.hoveredLaneId == lane.id);
         const Color laneBg = (i % 2 == 0) ? pal.laneBgEven : pal.laneBgOdd;
         const Color borderCol = isLaneSel ? pal.selectAccent : (isLaneHov ? pal.hoverAccent : pal.laneBorder);
-        const float bw = isLaneSel ? keel::max(1.8f, 2.2f * s) : keel::max(1.0f, 1.2f * s);
+        const keel::f32 bw = isLaneSel ? keel::max(1.8f, 2.2f * s) : keel::max(1.0f, 1.2f * s);
 
         canvas.DrawRect(sr, laneBg);
         canvas.DrawLine({sr.x + leftOffset, sr.y}, {sr.Right(), sr.y}, borderCol, bw);
@@ -2539,7 +2539,7 @@ void RenderBpmnEditorNode(const Node* node, ICanvas& canvas, const UiTheme& them
         canvas.DrawLine({laneHdrRect.Right(), laneHdrRect.y}, {laneHdrRect.Right(), laneHdrRect.Bottom()}, borderCol, bw);
 
         if (zoom >= 0.35f) {
-            const float fs = keel::clamp(11.0f * zs, 8.0f * s, 13.0f * s);
+            const keel::f32 fs = keel::clamp(11.0f * zs, 8.0f * s, 13.0f * s);
             DrawVerticalRotatedHeaderText(canvas, lane.name, laneHdrRect, fs, pal.laneText, FontStyle::Bold);
         }
     }
@@ -2561,7 +2561,7 @@ void RenderBpmnEditorNode(const Node* node, ICanvas& canvas, const UiTheme& them
             canvas.DrawRoundRect(poolSr, 3.0f * s, Color(0, 0, 0, 0), pal.laneBorder, keel::max(1.2f, 1.5f * s));
             canvas.DrawLine({poolHdrRect.Right(), poolHdrRect.y}, {poolHdrRect.Right(), poolHdrRect.Bottom()}, pal.laneBorder, keel::max(1.2f, 1.4f * s));
             if (zoom >= 0.35f) {
-                const float fs = keel::clamp(11.5f * zs, 8.5f * s, 13.5f * s);
+                const keel::f32 fs = keel::clamp(11.5f * zs, 8.5f * s, 13.5f * s);
                 DrawVerticalRotatedHeaderText(canvas, pName, poolHdrRect, fs, pal.laneText, FontStyle::Bold);
             }
         }
@@ -2668,8 +2668,8 @@ void RenderBpmnEditorNode(const Node* node, ICanvas& canvas, const UiTheme& them
             // Token Simulation Triggers on StartEvent / BoundaryEvent / Exclusive Gateway
             if (opts.tokenSimulation && zoom >= 0.45f) {
                 if (n.type == BpmnNodeType::StartEvent || n.type == BpmnNodeType::BoundaryEvent) {
-                    const float btnW = 22.0f * s;
-                    const float btnH = 18.0f * s;
+                    const keel::f32 btnW = 22.0f * s;
+                    const keel::f32 btnH = 18.0f * s;
                     const Rect trigRect(sr.x - btnW - 4.0f * s, sr.Center().y - btnH * 0.5f, btnW, btnH);
                     const Color trigCol = (n.type == BpmnNodeType::StartEvent) ? pal.simActiveGreen : pal.interEventStroke;
                     canvas.DrawRoundRect(trigRect, 4.0f * s, trigCol, pal.canvasBg, 1.2f * s);
@@ -2698,7 +2698,7 @@ void RenderBpmnEditorNode(const Node* node, ICanvas& canvas, const UiTheme& them
                 const auto worldPts = BuildEdgeWorldPoints(diagram, *fromNode, *toNode, *edge, opts.routingMode);
                 const Vec2 wPos = SamplePolylineAtProgress(worldPts, tok.progress);
                 const Vec2 sPos = WorldToScreen(wPos, viewRect, pan, zoom);
-                const float tr = keel::clamp(8.5f * zoom * s, 6.0f * s, 12.0f * s);
+                const keel::f32 tr = keel::clamp(8.5f * zoom * s, 6.0f * s, 12.0f * s);
                 canvas.DrawRoundRect(Rect(sPos.x - tr * 1.4f, sPos.y - tr * 1.4f, tr * 2.8f, tr * 2.8f), tr * 1.4f, tok.color.WithAlpha(75));
                 canvas.DrawRoundRect(Rect(sPos.x - tr, sPos.y - tr, tr * 2.0f, tr * 2.0f), tr, tok.color, Color(255, 255, 255, 240), 1.5f * s);
                 char ibuf[16];
@@ -2783,23 +2783,23 @@ void RenderBpmnEditorNode(const Node* node, ICanvas& canvas, const UiTheme& them
         if (state.primaryNodeId != 0 && state.selectedNodes.size() <= 1) {
             if (const BpmnNode* selNode = diagram.FindNode(state.primaryNodeId)) {
                 const keel::ArrayRef<keel::i32> actions = GetContextPadActionsForNode(*selNode);
-                const keel::i32 cols = keel::min(4, static_cast<keel::i32>(actions.size()));
-                const keel::i32 rows = (static_cast<keel::i32>(actions.size()) + 3) / 4;
+                const keel::i32 cols = keel::min(4, keel::as<keel::i32>(actions.size()));
+                const keel::i32 rows = (keel::as<keel::i32>(actions.size()) + 3) / 4;
                 const Rect nsr = WorldToScreenRect(selNode->Bounds(), viewRect, pan, zoom);
-                const float btnS = 26.0f * s;
-                const float gap = 4.0f * s;
-                const float padW = (btnS + gap) * static_cast<float>(cols) + 4.0f * s;
-                const float padH = (btnS + gap) * static_cast<float>(rows) + 4.0f * s;
-                const float padX = keel::min(viewRect.Right() - padW - 12.0f * s, nsr.Right() + 10.0f * s);
-                const float padY = keel::clamp(nsr.y - 4.0f * s, viewRect.y + 48.0f * s, viewRect.Bottom() - padH - 12.0f * s);
+                const keel::f32 btnS = 26.0f * s;
+                const keel::f32 gap = 4.0f * s;
+                const keel::f32 padW = (btnS + gap) * keel::as<keel::f32>(cols) + 4.0f * s;
+                const keel::f32 padH = (btnS + gap) * keel::as<keel::f32>(rows) + 4.0f * s;
+                const keel::f32 padX = keel::min(viewRect.Right() - padW - 12.0f * s, nsr.Right() + 10.0f * s);
+                const keel::f32 padY = keel::clamp(nsr.y - 4.0f * s, viewRect.y + 48.0f * s, viewRect.Bottom() - padH - 12.0f * s);
                 const Rect padFrame(padX - 4.0f * s, padY - 4.0f * s, padW, padH);
                 canvas.DrawRoundRect(padFrame, 6.0f * s, pal.hudBg, pal.hudBorder, 1.2f * s);
 
                 for (keel::usize slot = 0; slot < actions.size(); ++slot) {
                     const keel::i32 actIdx = actions[slot];
-                    const keel::i32 row = static_cast<keel::i32>(slot) / 4;
-                    const keel::i32 col = static_cast<keel::i32>(slot) % 4;
-                    const Rect br(padX + static_cast<float>(col) * (btnS + gap), padY + static_cast<float>(row) * (btnS + gap), btnS, btnS);
+                    const keel::i32 row = keel::as<keel::i32>(slot) / 4;
+                    const keel::i32 col = keel::as<keel::i32>(slot) % 4;
+                    const Rect br(padX + keel::as<keel::f32>(col) * (btnS + gap), padY + keel::as<keel::f32>(row) * (btnS + gap), btnS, btnS);
                     const bool isActiveBtn = (actIdx == 5 && state.replaceMenuOpen);
                     const bool isHovBtn = (state.hoveredContextPadBtn == actIdx);
                     const Color bBg = isActiveBtn
@@ -2814,8 +2814,8 @@ void RenderBpmnEditorNode(const Node* node, ICanvas& canvas, const UiTheme& them
 
                 // Floating tooltip for hovered Context Pad button
                 if (state.hoveredContextPadBtn >= 0 && state.hoveredContextPadBtn < 8 && !state.replaceMenuOpen) {
-                    const keel::StringRef tip = kContextPadTooltips[static_cast<keel::usize>(state.hoveredContextPadBtn)];
-                    const float tfs = 10.0f * s;
+                    const keel::StringRef tip = kContextPadTooltips[keel::as<keel::usize>(state.hoveredContextPadBtn)];
+                    const keel::f32 tfs = 10.0f * s;
                     const Vec2 tm = canvas.MeasureText(tip, tfs);
                     const Rect tipRect(padFrame.x, padFrame.y - tm.y - 10.0f * s, tm.x + 12.0f * s, tm.y + 6.0f * s);
                     canvas.DrawRoundRect(tipRect, 4.0f * s, pal.hudBg, pal.selectAccent, 1.0f * s);
@@ -2838,16 +2838,16 @@ void RenderBpmnEditorNode(const Node* node, ICanvas& canvas, const UiTheme& them
                         items = {"Blank Event", "Message Event", "Timer Event", "Error Event", "Signal Event", "Escalation Event", "Terminate End Event", ""};
                         itemCount = 7;
                     }
-                    const float rowH = 24.0f * s;
-                    const float popH = 30.0f * s + static_cast<float>(itemCount) * rowH;
+                    const keel::f32 rowH = 24.0f * s;
+                    const keel::f32 popH = 30.0f * s + keel::as<keel::f32>(itemCount) * rowH;
                     const Rect popRect(padFrame.x, padFrame.Bottom() + 6.0f * s, 204.0f * s, popH);
                     canvas.DrawRoundRect(popRect, 7.0f * s, pal.hudBg, pal.selectAccent, 1.4f * s);
                     canvas.DrawText("CHANGE ELEMENT TYPE", {popRect.x + 10.0f * s, popRect.y + 7.0f * s}, 9.5f * s, pal.selectAccent);
                     canvas.DrawLine({popRect.x + 6.0f * s, popRect.y + 23.0f * s}, {popRect.Right() - 6.0f * s, popRect.y + 23.0f * s}, pal.hudBorder, 1.0f * s);
 
                     for (keel::usize k = 0; k < itemCount; ++k) {
-                        const Rect ir(popRect.x + 6.0f * s, popRect.y + 27.0f * s + static_cast<float>(k) * rowH, popRect.w - 12.0f * s, rowH - 2.0f * s);
-                        const bool isRowHov = (state.hoveredReplaceMenuItem == static_cast<keel::i32>(k));
+                        const Rect ir(popRect.x + 6.0f * s, popRect.y + 27.0f * s + keel::as<keel::f32>(k) * rowH, popRect.w - 12.0f * s, rowH - 2.0f * s);
+                        const bool isRowHov = (state.hoveredReplaceMenuItem == keel::as<keel::i32>(k));
                         canvas.DrawRoundRect(ir, 4.0f * s, isRowHov ? pal.hudActiveBg : pal.hudHover);
 
                         const Rect iconBox(ir.x + 5.0f * s, ir.y + 3.0f * s, 16.0f * s, 16.0f * s);
@@ -2883,11 +2883,11 @@ void RenderBpmnEditorNode(const Node* node, ICanvas& canvas, const UiTheme& them
                     const Rect bar(sMid.x - 110.0f * s, sMid.y - 38.0f * s, 220.0f * s, 26.0f * s);
                     canvas.DrawRoundRect(bar, 5.0f * s, pal.hudBg, pal.selectAccent, 1.2f * s);
                     static constexpr keel::StaticArray<keel::StringRef, 6> kEdgeActions = {"Seq", "Def \\", "Cond", "Msg", "Auto", "Del"};
-                    const float bw = (bar.w - 8.0f * s) / 6.0f;
+                    const keel::f32 bw = (bar.w - 8.0f * s) / 6.0f;
                     for (keel::i32 i = 0; i < 6; ++i) {
-                        const Rect br(bar.x + 4.0f * s + static_cast<float>(i) * bw, bar.y + 3.0f * s, bw - 2.0f * s, bar.h - 6.0f * s);
+                        const Rect br(bar.x + 4.0f * s + keel::as<keel::f32>(i) * bw, bar.y + 3.0f * s, bw - 2.0f * s, bar.h - 6.0f * s);
                         canvas.DrawRoundRect(br, 3.0f * s, (i == 5) ? pal.endEventFill : pal.hudHover);
-                        canvas.DrawTextBox(kEdgeActions[static_cast<keel::usize>(i)], br, 8.6f * s, (i == 5) ? pal.endEventStroke : pal.textPrimary, 0.5f, 0.5f);
+                        canvas.DrawTextBox(kEdgeActions[keel::as<keel::usize>(i)], br, 8.6f * s, (i == 5) ? pal.endEventStroke : pal.textPrimary, 0.5f, 0.5f);
                     }
                 }
             }
@@ -2897,11 +2897,11 @@ void RenderBpmnEditorNode(const Node* node, ICanvas& canvas, const UiTheme& them
                 const Rect bar(keel::max(viewRect.x + 58.0f * s, lsr.x + 44.0f * s), keel::max(viewRect.y + 48.0f * s, lsr.y - 30.0f * s), 232.0f * s, 26.0f * s);
                 canvas.DrawRoundRect(bar, 5.0f * s, pal.hudBg, pal.selectAccent, 1.2f * s);
                 static constexpr keel::StaticArray<keel::StringRef, 4> kLaneActions = {"+Above", "+Below", "Split /2", "Del Lane"};
-                const float bw = (bar.w - 8.0f * s) / 4.0f;
+                const keel::f32 bw = (bar.w - 8.0f * s) / 4.0f;
                 for (keel::i32 i = 0; i < 4; ++i) {
-                    const Rect br(bar.x + 4.0f * s + static_cast<float>(i) * bw, bar.y + 3.0f * s, bw - 2.0f * s, bar.h - 6.0f * s);
+                    const Rect br(bar.x + 4.0f * s + keel::as<keel::f32>(i) * bw, bar.y + 3.0f * s, bw - 2.0f * s, bar.h - 6.0f * s);
                     canvas.DrawRoundRect(br, 3.0f * s, (i == 3) ? pal.endEventFill : pal.hudHover);
-                    canvas.DrawTextBox(kLaneActions[static_cast<keel::usize>(i)], br, 9.0f * s, (i == 3) ? pal.endEventStroke : pal.textPrimary, 0.5f, 0.5f);
+                    canvas.DrawTextBox(kLaneActions[keel::as<keel::usize>(i)], br, 9.0f * s, (i == 3) ? pal.endEventStroke : pal.textPrimary, 0.5f, 0.5f);
                 }
             }
         }
@@ -2939,20 +2939,20 @@ void RenderBpmnEditorNode(const Node* node, ICanvas& canvas, const UiTheme& them
     if (opts.showLeftPalette && !opts.readOnly) {
         const Rect palRect = ComputeLeftPaletteRect(viewRect, opts.showTopBar, s);
         canvas.DrawRoundRect(palRect, 7.0f * s, pal.hudBg, pal.hudBorder, 1.2f * s);
-        float cy = palRect.y + 5.0f * s;
-        const float btnH = 25.0f * s;
+        keel::f32 cy = palRect.y + 5.0f * s;
+        const keel::f32 btnH = 25.0f * s;
         for (keel::usize idx = 0; idx < kPaletteItems.size(); ++idx) {
             const auto& item = kPaletteItems[idx];
             if (cy + btnH > palRect.Bottom() - 2.0f * s) break;
             const Rect br(palRect.x + 4.0f * s, cy, palRect.w - 8.0f * s, btnH);
             const bool isActive = (state.activeTool == item.tool);
-            const bool isHov = (state.hoveredPaletteIdx == static_cast<keel::i32>(idx));
+            const bool isHov = (state.hoveredPaletteIdx == keel::as<keel::i32>(idx));
             if (isActive || isHov) {
                 canvas.DrawRoundRect(br, 4.0f * s, isActive ? pal.hudActiveBg : pal.hudHover, isActive ? pal.selectAccent : pal.hudBorder, 1.1f * s);
             }
             DrawPaletteButtonIcon(canvas, br, item.tool, (isActive || isHov) ? pal.selectAccent : pal.textPrimary, pal, s);
             if (isHov) {
-                const float tfs = 10.0f * s;
+                const keel::f32 tfs = 10.0f * s;
                 const Vec2 tm = canvas.MeasureText(item.tooltip, tfs);
                 const Rect tipRect(palRect.Right() + 8.0f * s, br.Center().y - tm.y * 0.5f - 3.5f * s, tm.x + 12.0f * s, tm.y + 7.0f * s);
                 canvas.DrawRoundRect(tipRect, 4.0f * s, pal.hudBg, pal.selectAccent, 1.0f * s);
@@ -2989,8 +2989,8 @@ void RenderBpmnEditorNode(const Node* node, ICanvas& canvas, const UiTheme& them
             0.5f
         );
 
-        float rx = topBar.Right() - 6.0f * s;
-        auto drawTopPill = [&](keel::StringRef text, float w, bool active, Color activeCol) -> Rect {
+        keel::f32 rx = topBar.Right() - 6.0f * s;
+        auto drawTopPill = [&](keel::StringRef text, keel::f32 w, bool active, Color activeCol) -> Rect {
             rx -= w;
             const Rect pr(rx, topBar.y + 4.0f * s, w, topBar.h - 8.0f * s);
             rx -= 5.0f * s;
@@ -3029,7 +3029,7 @@ void RenderBpmnEditorNode(const Node* node, ICanvas& canvas, const UiTheme& them
     if (opts.showZoomControls) {
         const Rect zHud = ComputeZoomHudRect(viewRect, s);
         canvas.DrawRoundRect(zHud, 5.0f * s, pal.hudBg, pal.hudBorder, 1.2f * s);
-        const float btnW = 28.0f * s;
+        const keel::f32 btnW = 28.0f * s;
         const Rect minusR(zHud.x + 2.0f * s, zHud.y + 2.0f * s, btnW, zHud.h - 4.0f * s);
         const Rect pctR(minusR.Right() + 2.0f * s, zHud.y + 2.0f * s, 58.0f * s, zHud.h - 4.0f * s);
         const Rect plusR(pctR.Right() + 2.0f * s, zHud.y + 2.0f * s, btnW, zHud.h - 4.0f * s);
@@ -3053,12 +3053,12 @@ void RenderBpmnEditorNode(const Node* node, ICanvas& canvas, const UiTheme& them
         canvas.PushClip(mm);
 
         const Rect wb = ComputeDiagramWorldBounds(diagram);
-        const float pad = 8.0f * s;
-        const float sx = (mm.w - pad * 2.0f) / keel::max(100.0f, wb.w);
-        const float sy = (mm.h - pad * 2.0f) / keel::max(100.0f, wb.h);
-        const float ms = keel::min(sx, sy);
-        const float ox = mm.x + (mm.w - wb.w * ms) * 0.5f - wb.x * ms;
-        const float oy = mm.y + (mm.h - wb.h * ms) * 0.5f - wb.y * ms;
+        const keel::f32 pad = 8.0f * s;
+        const keel::f32 sx = (mm.w - pad * 2.0f) / keel::max(100.0f, wb.w);
+        const keel::f32 sy = (mm.h - pad * 2.0f) / keel::max(100.0f, wb.h);
+        const keel::f32 ms = keel::min(sx, sy);
+        const keel::f32 ox = mm.x + (mm.w - wb.w * ms) * 0.5f - wb.x * ms;
+        const keel::f32 oy = mm.y + (mm.h - wb.h * ms) * 0.5f - wb.y * ms;
 
         for (const auto& l : diagram.lanes) {
             canvas.DrawRect(Rect(ox + l.rect.x * ms, oy + l.rect.y * ms, l.rect.w * ms, l.rect.h * ms), pal.laneHeaderBg.WithAlpha(110));
@@ -3093,15 +3093,15 @@ Vec2 BpmnEditor::Measure(
     UiSize /*size*/,
     ICanvas* /*canvas*/,
     const UiTheme& /*theme*/,
-    float availableWidth
+    keel::f32 availableWidth
 ) {
-    float defaultW = 880.0f;
+    keel::f32 defaultW = 880.0f;
     if (opts.width.IsFixed()) {
         defaultW = opts.width.Dp();
     } else if (opts.width.ResolveMode(SizeMode::Stretch) == SizeMode::Stretch && availableWidth > 0.0f) {
         defaultW = availableWidth;
     }
-    const float defaultH = opts.height.IsFixed()
+    const keel::f32 defaultH = opts.height.IsFixed()
         ? opts.height.Dp()
         : 520.0f;
     return {defaultW, defaultH};
@@ -3117,7 +3117,7 @@ BpmnEditorResponse BpmnEditor::Run(
     const Id id = ctx.MakeChildId(loc);
     const bool isDisabled = opts.disabled || ctx.IsDisabled();
     const UiSize effectiveSize = opts.size;
-    constexpr float s = 1.0f;
+    constexpr keel::f32 s = 1.0f;
     ICanvas* canvas = ctx.GetCanvas();
 
     diagram.SyncBoundaryEvents();
@@ -3171,10 +3171,10 @@ BpmnEditorResponse BpmnEditor::Run(
         }
     }
 
-    const double nowSec = ctx.GetCurrentTime();
+    const keel::f64 nowSec = ctx.GetCurrentTime();
     if (effOpts.tokenSimulation) {
-        const float dtSec = (state.lastSimTickSec > 0.0)
-            ? static_cast<float>(keel::clamp(nowSec - state.lastSimTickSec, 0.004, 0.08))
+        const keel::f32 dtSec = (state.lastSimTickSec > 0.0)
+            ? keel::as<keel::f32>(keel::clamp(nowSec - state.lastSimTickSec, 0.004, 0.08))
             : 0.016f;
         state.lastSimTickSec = nowSec;
         StepTokenSimulation(diagram, state, dtSec, effOpts.simulationSpeed, effOpts.autoSpawnTokens);
@@ -3233,8 +3233,8 @@ BpmnEditorResponse BpmnEditor::Run(
             const Rect topBar = ComputeTopBarRect(viewRect, s);
             if (topBar.Contains(mouse)) {
                 hudConsumedClick = true;
-                float rx = topBar.Right() - 6.0f * s;
-                auto hitTopPill = [&](float w) -> bool {
+                keel::f32 rx = topBar.Right() - 6.0f * s;
+                auto hitTopPill = [&](keel::f32 w) -> bool {
                     rx -= w;
                     const Rect pr(rx, topBar.y + 4.0f * s, w, topBar.h - 8.0f * s);
                     rx -= 5.0f * s;
@@ -3298,13 +3298,13 @@ BpmnEditorResponse BpmnEditor::Run(
 
         if (hovered && effOpts.showLeftPalette && !effOpts.readOnly) {
             if (palRect.Contains(mouse)) {
-                float cy = palRect.y + 5.0f * s;
-                const float btnH = 25.0f * s;
+                keel::f32 cy = palRect.y + 5.0f * s;
+                const keel::f32 btnH = 25.0f * s;
                 for (keel::usize i = 0; i < kPaletteItems.size(); ++i) {
                     const auto& item = kPaletteItems[i];
                     const Rect br(palRect.x + 4.0f * s, cy, palRect.w - 8.0f * s, btnH);
                     if (br.Contains(mouse)) {
-                        state.hoveredPaletteIdx = static_cast<keel::i32>(i);
+                        state.hoveredPaletteIdx = keel::as<keel::i32>(i);
                         if (!hudConsumedClick && lmbClicked) {
                             hudConsumedClick = true;
                             state.activeTool = item.tool;
@@ -3329,7 +3329,7 @@ BpmnEditorResponse BpmnEditor::Run(
             const Rect zHud = ComputeZoomHudRect(viewRect, s);
             if (zHud.Contains(mouse)) {
                 hudConsumedClick = true;
-                const float btnW = 28.0f * s;
+                const keel::f32 btnW = 28.0f * s;
                 const Rect minusR(zHud.x + 2.0f * s, zHud.y + 2.0f * s, btnW, zHud.h - 4.0f * s);
                 const Rect pctR(minusR.Right() + 2.0f * s, zHud.y + 2.0f * s, 58.0f * s, zHud.h - 4.0f * s);
                 const Rect plusR(pctR.Right() + 2.0f * s, zHud.y + 2.0f * s, btnW, zHud.h - 4.0f * s);
@@ -3362,14 +3362,14 @@ BpmnEditorResponse BpmnEditor::Run(
             if (mm.Contains(mouse) && (lmbClicked || (lmbDown && !state.draggingNodes && !state.panningCanvas && !state.resizingNode && !state.draggingEdgeSegment))) {
                 hudConsumedClick = true;
                 const Rect wb = ComputeDiagramWorldBounds(diagram);
-                const float pad = 8.0f * s;
-                const float sx = (mm.w - pad * 2.0f) / keel::max(100.0f, wb.w);
-                const float sy = (mm.h - pad * 2.0f) / keel::max(100.0f, wb.h);
-                const float ms = keel::min(sx, sy);
-                const float ox = mm.x + (mm.w - wb.w * ms) * 0.5f - wb.x * ms;
-                const float oy = mm.y + (mm.h - wb.h * ms) * 0.5f - wb.y * ms;
-                const float targetWorldX = (mouse.x - ox) / keel::max(1e-4f, ms);
-                const float targetWorldY = (mouse.y - oy) / keel::max(1e-4f, ms);
+                const keel::f32 pad = 8.0f * s;
+                const keel::f32 sx = (mm.w - pad * 2.0f) / keel::max(100.0f, wb.w);
+                const keel::f32 sy = (mm.h - pad * 2.0f) / keel::max(100.0f, wb.h);
+                const keel::f32 ms = keel::min(sx, sy);
+                const keel::f32 ox = mm.x + (mm.w - wb.w * ms) * 0.5f - wb.x * ms;
+                const keel::f32 oy = mm.y + (mm.h - wb.h * ms) * 0.5f - wb.y * ms;
+                const keel::f32 targetWorldX = (mouse.x - ox) / keel::max(1e-4f, ms);
+                const keel::f32 targetWorldY = (mouse.y - oy) / keel::max(1e-4f, ms);
                 state.pan.x = viewRect.w * 0.5f - targetWorldX * state.zoom;
                 state.pan.y = viewRect.h * 0.5f - targetWorldY * state.zoom;
                 ctx.RequestRepaint(2);
@@ -3382,24 +3382,24 @@ BpmnEditorResponse BpmnEditor::Run(
                 if (BpmnNode* selNode = diagram.FindNode(state.primaryNodeId)) {
                     const Rect nsr = WorldToScreenRect(selNode->Bounds(), viewRect, state.pan, state.zoom);
                     const auto padActions = GetContextPadActionsForNode(*selNode);
-                    const keel::i32 numCols = keel::min(4, static_cast<keel::i32>(padActions.size()));
-                    const keel::i32 numRows = (static_cast<keel::i32>(padActions.size()) + 3) / 4;
-                    const float padX = keel::min(viewRect.Right() - 156.0f * s, nsr.Right() + 10.0f * s);
-                    const float padY = keel::clamp(nsr.y - 4.0f * s, viewRect.y + 48.0f * s, viewRect.Bottom() - 100.0f * s);
-                    const float btnS = 26.0f * s;
-                    const float gap = 4.0f * s;
+                    const keel::i32 numCols = keel::min(4, keel::as<keel::i32>(padActions.size()));
+                    const keel::i32 numRows = (keel::as<keel::i32>(padActions.size()) + 3) / 4;
+                    const keel::f32 padX = keel::min(viewRect.Right() - 156.0f * s, nsr.Right() + 10.0f * s);
+                    const keel::f32 padY = keel::clamp(nsr.y - 4.0f * s, viewRect.y + 48.0f * s, viewRect.Bottom() - 100.0f * s);
+                    const keel::f32 btnS = 26.0f * s;
+                    const keel::f32 gap = 4.0f * s;
                     const Rect padFrame(
                         padX - 4.0f * s,
                         padY - 4.0f * s,
-                        (btnS + gap) * static_cast<float>(numCols) + 4.0f * s,
-                        (btnS + gap) * static_cast<float>(numRows) + 4.0f * s
+                        (btnS + gap) * keel::as<keel::f32>(numCols) + 4.0f * s,
+                        (btnS + gap) * keel::as<keel::f32>(numRows) + 4.0f * s
                     );
 
                     if (state.replaceMenuOpen) {
                         const Rect popRect(padFrame.x, padFrame.Bottom() + 6.0f * s, 210.0f * s, 224.0f * s);
                         if (popRect.Contains(mouse)) {
-                            const float rowH = 23.0f * s;
-                            const keel::i32 idx = static_cast<keel::i32>((mouse.y - (popRect.y + 27.0f * s)) / rowH);
+                            const keel::f32 rowH = 23.0f * s;
+                            const keel::i32 idx = keel::as<keel::i32>((mouse.y - (popRect.y + 27.0f * s)) / rowH);
                             const keel::i32 maxItems = (selNode->type == BpmnNodeType::Task || selNode->type == BpmnNodeType::SubProcess) ? 8
                                                : (selNode->type == BpmnNodeType::Gateway ? 4 : 7);
                             if (idx >= 0 && idx < maxItems) {
@@ -3430,7 +3430,7 @@ BpmnEditorResponse BpmnEditor::Run(
                                                     BpmnTaskType::User, BpmnTaskType::Service, BpmnTaskType::Send,
                                                     BpmnTaskType::Receive, BpmnTaskType::Script, BpmnTaskType::BusinessRule
                                                 };
-                                                mutNode->taskType = kTaskTypes[static_cast<keel::usize>(idx)];
+                                                mutNode->taskType = kTaskTypes[keel::as<keel::usize>(idx)];
                                             }
                                             diagram.SyncBoundaryEvents();
                                         } else if (mutNode->type == BpmnNodeType::Gateway && idx < 4) {
@@ -3451,9 +3451,9 @@ BpmnEditorResponse BpmnEditor::Run(
                     if (padFrame.Contains(mouse)) {
                         for (keel::usize idx = 0; idx < padActions.size(); ++idx) {
                             const keel::i32 actionId = padActions[idx];
-                            const keel::i32 row = static_cast<keel::i32>(idx) / 4;
-                            const keel::i32 col = static_cast<keel::i32>(idx) % 4;
-                            const Rect br(padX + static_cast<float>(col) * (btnS + gap), padY + static_cast<float>(row) * (btnS + gap), btnS, btnS);
+                            const keel::i32 row = keel::as<keel::i32>(idx) / 4;
+                            const keel::i32 col = keel::as<keel::i32>(idx) % 4;
+                            const Rect br(padX + keel::as<keel::f32>(col) * (btnS + gap), padY + keel::as<keel::f32>(row) * (btnS + gap), btnS, btnS);
                             if (!br.Contains(mouse)) continue;
                             state.hoveredContextPadBtn = actionId;
                             if (!hudConsumedClick && lmbClicked) {
@@ -3471,12 +3471,12 @@ BpmnEditorResponse BpmnEditor::Run(
                                     nn.label = label;
                                     nn.size = BpmnDiagram::DefaultNodeSize(newType);
                                     if (newType == BpmnNodeType::TextAnnotation) {
-                                        const float targetCX = SnapValue(srcCenter.x + srcSize.x * 0.5f + 70.0f, effOpts.gridStep);
-                                        const float targetCY = SnapValue(srcPos.y - 45.0f, effOpts.gridStep);
+                                        const keel::f32 targetCX = SnapValue(srcCenter.x + srcSize.x * 0.5f + 70.0f, effOpts.gridStep);
+                                        const keel::f32 targetCY = SnapValue(srcPos.y - 45.0f, effOpts.gridStep);
                                         nn.pos = {targetCX - nn.size.x * 0.5f, targetCY - nn.size.y * 0.5f};
                                     } else {
-                                        const float gapX = (newType == BpmnNodeType::Task || newType == BpmnNodeType::SubProcess) ? 60.0f : 50.0f;
-                                        const float targetCX = SnapValue(srcPos.x + srcSize.x + gapX + nn.size.x * 0.5f, effOpts.gridStep);
+                                        const keel::f32 gapX = (newType == BpmnNodeType::Task || newType == BpmnNodeType::SubProcess) ? 60.0f : 50.0f;
+                                        const keel::f32 targetCX = SnapValue(srcPos.x + srcSize.x + gapX + nn.size.x * 0.5f, effOpts.gridStep);
                                         nn.pos = {targetCX - nn.size.x * 0.5f, srcCenter.y - nn.size.y * 0.5f};
                                     }
                                     nn.laneId = srcLane;
@@ -3527,8 +3527,8 @@ BpmnEditorResponse BpmnEditor::Run(
                         const Rect bar(sMid.x - 110.0f * s, sMid.y - 36.0f * s, 220.0f * s, 26.0f * s);
                         if (bar.Contains(mouse)) {
                             hudConsumedClick = true;
-                            const float bw = (bar.w - 8.0f * s) / 6.0f;
-                            const keel::i32 idx = keel::clamp(static_cast<keel::i32>((mouse.x - (bar.x + 4.0f * s)) / bw), 0, 5);
+                            const keel::f32 bw = (bar.w - 8.0f * s) / 6.0f;
+                            const keel::i32 idx = keel::clamp(keel::as<keel::i32>((mouse.x - (bar.x + 4.0f * s)) / bw), 0, 5);
                             state.PushUndo(diagram);
                             if (idx == 0) selEdge->flowType = BpmnFlowType::SequenceFlow;
                             else if (idx == 1) selEdge->flowType = BpmnFlowType::DefaultFlow;
@@ -3553,8 +3553,8 @@ BpmnEditorResponse BpmnEditor::Run(
                     const Rect bar(keel::max(viewRect.x + 58.0f * s, lsr.x + 44.0f * s), keel::max(viewRect.y + 48.0f * s, lsr.y - 30.0f * s), 232.0f * s, 26.0f * s);
                     if (bar.Contains(mouse)) {
                         hudConsumedClick = true;
-                        const float bw = (bar.w - 8.0f * s) / 4.0f;
-                        const keel::i32 idx = keel::clamp(static_cast<keel::i32>((mouse.x - (bar.x + 4.0f * s)) / bw), 0, 3);
+                        const keel::f32 bw = (bar.w - 8.0f * s) / 4.0f;
+                        const keel::i32 idx = keel::clamp(keel::as<keel::i32>((mouse.x - (bar.x + 4.0f * s)) / bw), 0, 3);
                         state.PushUndo(diagram);
                         const Rect curR = selLane->rect;
                         const auto poolName = selLane->poolName;
@@ -3565,7 +3565,7 @@ BpmnEditorResponse BpmnEditor::Run(
                             const keel::u32 newId = diagram.AddLane(poolName, "Lower Lane", Rect(curR.x, curR.Bottom(), curR.w, 180.0f));
                             state.selectedLaneId = newId;
                         } else if (idx == 2 && curR.h >= 140.0f) {
-                            const float halfH = curR.h * 0.5f;
+                            const keel::f32 halfH = curR.h * 0.5f;
                             selLane->rect.h = halfH;
                             keel::SmallString<128> splitName = keel::SmallString<128>::from(selLane->name);
                             splitName.append(" B");
@@ -3587,7 +3587,7 @@ BpmnEditorResponse BpmnEditor::Run(
             const Vec2 wheel = ctx.GetMouseWheel();
             if (keel::abs(wheel.y) > 0.01f) {
                 const Vec2 worldBefore = ScreenToWorld(mouse, viewRect, state.pan, state.zoom);
-                const float factor = (wheel.y > 0.0f) ? 1.12f : (1.0f / 1.12f);
+                const keel::f32 factor = (wheel.y > 0.0f) ? 1.12f : (1.0f / 1.12f);
                 state.zoom = keel::clamp(state.zoom * factor, 0.25f, 2.5f);
                 state.pan.x = mouse.x - viewRect.x - worldBefore.x * state.zoom;
                 state.pan.y = mouse.y - viewRect.y - worldBefore.y * state.zoom;
@@ -3617,7 +3617,7 @@ BpmnEditorResponse BpmnEditor::Run(
                         const Rect nsr = WorldToScreenRect(selNode->Bounds(), viewRect, state.pan, state.zoom);
                         const auto corners = GetNodeResizeHandleRects(nsr, state.zoom, s);
                         for (keel::i32 c = 0; c < 4; ++c) {
-                            const Rect& cr = corners[static_cast<keel::usize>(c)];
+                            const Rect& cr = corners[keel::as<keel::usize>(c)];
                             const Rect hitR(cr.x - 3.0f * s, cr.y - 3.0f * s, cr.w + 6.0f * s, cr.h + 6.0f * s);
                             if (hitR.Contains(mouse)) {
                                 state.hoveredResizeCorner = c;
@@ -3638,7 +3638,7 @@ BpmnEditorResponse BpmnEditor::Run(
                         if (wpts.size() >= 2) {
                             const Vec2 pStart = WorldToScreen(wpts.front(), viewRect, state.pan, state.zoom);
                             const Vec2 pEnd = WorldToScreen(wpts.back(), viewRect, state.pan, state.zoom);
-                            const float endR = 8.5f * s;
+                            const keel::f32 endR = 8.5f * s;
                             if ((mouse.x - pStart.x) * (mouse.x - pStart.x) + (mouse.y - pStart.y) * (mouse.y - pStart.y) <= endR * endR) {
                                 state.hoveredEdgeEndpoint = 1;
                                 state.hoveredEdgeId = selEdge->id;
@@ -3646,13 +3646,13 @@ BpmnEditorResponse BpmnEditor::Run(
                                 state.hoveredEdgeEndpoint = 2;
                                 state.hoveredEdgeId = selEdge->id;
                             } else if (effOpts.routingMode == BpmnRoutingMode::Orthogonal) {
-                                const float segTolSq = (7.0f * s) * (7.0f * s);
+                                const keel::f32 segTolSq = (7.0f * s) * (7.0f * s);
                                 for (keel::usize i = 0; i + 1 < wpts.size(); ++i) {
                                     const Vec2 sp0 = WorldToScreen(wpts[i], viewRect, state.pan, state.zoom);
                                     const Vec2 sp1 = WorldToScreen(wpts[i + 1], viewRect, state.pan, state.zoom);
-                                    const float segLen = keel::hypot(sp1.x - sp0.x, sp1.y - sp0.y);
+                                    const keel::f32 segLen = keel::hypot(sp1.x - sp0.x, sp1.y - sp0.y);
                                     if (segLen >= 18.0f * s && PointToSegmentDistanceSq(mouse, sp0, sp1) <= segTolSq) {
-                                        state.hoveredEdgeSegIdx = static_cast<keel::i32>(i);
+                                        state.hoveredEdgeSegIdx = keel::as<keel::i32>(i);
                                         state.hoveredEdgeId = selEdge->id;
                                         break;
                                     }
@@ -3729,8 +3729,8 @@ BpmnEditorResponse BpmnEditor::Run(
             }
 
             if (state.hoveredNodeId == 0 && state.hoveredEdgeId == 0) {
-                const float tolWorld = 7.5f / keel::max(0.25f, state.zoom);
-                const float tolSq = tolWorld * tolWorld;
+                const keel::f32 tolWorld = 7.5f / keel::max(0.25f, state.zoom);
+                const keel::f32 tolSq = tolWorld * tolWorld;
                 for (const auto& edge : diagram.edges) {
                     const BpmnNode* fn = diagram.FindNode(edge.fromNodeId);
                     const BpmnNode* tn = diagram.FindNode(edge.toNodeId);
@@ -3780,7 +3780,7 @@ BpmnEditorResponse BpmnEditor::Run(
             Vec2 gPos{gCenter.x - gSize.x * 0.5f, gCenter.y - gSize.y * 0.5f};
             state.activeGuides.clear();
             if (effOpts.smartGuides && state.dragBoundaryHostId == 0) {
-                const float snapTol = 6.0f;
+                const keel::f32 snapTol = 6.0f;
                 for (const auto& other : diagram.nodes) {
                     if (other.type == BpmnNodeType::BoundaryEvent) continue;
                     const Vec2 oc = other.Center();
@@ -3813,8 +3813,8 @@ BpmnEditorResponse BpmnEditor::Run(
             for (auto& n : diagram.nodes) {
                 const Rect sr = WorldToScreenRect(n.Bounds(), viewRect, state.pan, state.zoom);
                 if (n.type == BpmnNodeType::StartEvent || n.type == BpmnNodeType::BoundaryEvent) {
-                    const float btnW = 22.0f * s;
-                    const float btnH = 18.0f * s;
+                    const keel::f32 btnW = 22.0f * s;
+                    const keel::f32 btnH = 18.0f * s;
                     const Rect trigRect(sr.x - btnW - 4.0f * s, sr.Center().y - btnH * 0.5f, btnW, btnH);
                     if (trigRect.Contains(mouse) || sr.Contains(mouse)) {
                         SpawnTokenFromStartEvent(diagram, n, state);
@@ -3899,9 +3899,9 @@ BpmnEditorResponse BpmnEditor::Run(
             ctx.RequestFocus(id);
             state.PushUndo(diagram);
             if (state.activeTool == BpmnTool::CreateLane) {
-                float newY = SnapValue(resp.mouseWorldPos.y, effOpts.gridStep);
-                float newX = SnapValue(resp.mouseWorldPos.x - 120.0f, effOpts.gridStep);
-                float newW = 1280.0f;
+                keel::f32 newY = SnapValue(resp.mouseWorldPos.y, effOpts.gridStep);
+                keel::f32 newX = SnapValue(resp.mouseWorldPos.x - 120.0f, effOpts.gridStep);
+                keel::f32 newW = 1280.0f;
                 if (!diagram.lanes.empty()) {
                     newX = diagram.lanes.back().rect.x;
                     newY = diagram.lanes.back().rect.Bottom();
@@ -4005,8 +4005,8 @@ BpmnEditorResponse BpmnEditor::Run(
                         const auto fullPts = BuildEdgeWorldPoints(diagram, *fn, *tn, *se, effOpts.routingMode);
                         if (fullPts.size() >= 2) {
                             keel::i32 segIdx = state.hoveredEdgeSegIdx;
-                            const bool isHoriz = keel::abs(fullPts[static_cast<keel::usize>(segIdx) + 1].y - fullPts[static_cast<keel::usize>(segIdx)].y) <=
-                                                 keel::abs(fullPts[static_cast<keel::usize>(segIdx) + 1].x - fullPts[static_cast<keel::usize>(segIdx)].x);
+                            const bool isHoriz = keel::abs(fullPts[keel::as<keel::usize>(segIdx) + 1].y - fullPts[keel::as<keel::usize>(segIdx)].y) <=
+                                                 keel::abs(fullPts[keel::as<keel::usize>(segIdx) + 1].x - fullPts[keel::as<keel::usize>(segIdx)].x);
                             keel::Array<Vec2> inner;
                             if (fullPts.size() <= 2) {
                                 const Vec2 mid{(fullPts.front().x + fullPts.back().x) * 0.5f, (fullPts.front().y + fullPts.back().y) * 0.5f};
@@ -4019,9 +4019,9 @@ BpmnEditorResponse BpmnEditor::Run(
                                     segIdx = 1;
                                 }
                                 for (keel::usize k = 1; k + 1 < fullPts.size(); ++k) inner.push_back(fullPts[k]);
-                                if (state.hoveredEdgeSegIdx >= static_cast<keel::i32>(fullPts.size()) - 2) {
+                                if (state.hoveredEdgeSegIdx >= keel::as<keel::i32>(fullPts.size()) - 2) {
                                     inner.push_back(inner.back());
-                                    segIdx = static_cast<keel::i32>(inner.size()) - 1;
+                                    segIdx = keel::as<keel::i32>(inner.size()) - 1;
                                 }
                             }
                             se->waypoints = keel::move(inner);
@@ -4112,8 +4112,8 @@ BpmnEditorResponse BpmnEditor::Run(
                 state.selectedLaneId = state.hoveredLaneId;
                 if (!effOpts.readOnly && !effOpts.tokenSimulation) {
                     if (const BpmnLane* l = diagram.FindLane(state.hoveredLaneId)) {
-                        const float headerWorldW = 64.0f;
-                        const float edgeTol = 12.0f / keel::max(0.25f, state.zoom);
+                        const keel::f32 headerWorldW = 64.0f;
+                        const keel::f32 edgeTol = 12.0f / keel::max(0.25f, state.zoom);
                         if (keel::abs(resp.mouseWorldPos.x - l->rect.Right()) <= edgeTol) {
                             state.draggingLane = true;
                             state.laneResizeEdge = 1;
@@ -4170,12 +4170,12 @@ BpmnEditorResponse BpmnEditor::Run(
                         resp.mouseWorldPos.x - state.resizeStartWorld.x,
                         resp.mouseWorldPos.y - state.resizeStartWorld.y
                     };
-                    const float minW = (rn->type == BpmnNodeType::SubProcess && rn->isExpanded) ? 200.0f : 80.0f;
-                    const float minH = (rn->type == BpmnNodeType::SubProcess && rn->isExpanded) ? 120.0f : 50.0f;
-                    float left = state.resizeInitialBounds.x;
-                    float top = state.resizeInitialBounds.y;
-                    float right = state.resizeInitialBounds.Right();
-                    float bottom = state.resizeInitialBounds.Bottom();
+                    const keel::f32 minW = (rn->type == BpmnNodeType::SubProcess && rn->isExpanded) ? 200.0f : 80.0f;
+                    const keel::f32 minH = (rn->type == BpmnNodeType::SubProcess && rn->isExpanded) ? 120.0f : 50.0f;
+                    keel::f32 left = state.resizeInitialBounds.x;
+                    keel::f32 top = state.resizeInitialBounds.y;
+                    keel::f32 right = state.resizeInitialBounds.Right();
+                    keel::f32 bottom = state.resizeInitialBounds.Bottom();
 
                     if (state.resizeCorner == 0 || state.resizeCorner == 3) {
                         left = keel::min(right - minW, left + delta.x);
@@ -4216,15 +4216,15 @@ BpmnEditorResponse BpmnEditor::Run(
                     const keel::i32 wpIdx0 = state.dragEdgeSegIdx - 1;
                     const keel::i32 wpIdx1 = state.dragEdgeSegIdx;
                     if (state.dragEdgeSegHorizontal) {
-                        float newY = ((wpIdx0 >= 0 && wpIdx0 < static_cast<keel::i32>(se->waypoints.size())) ? se->waypoints[static_cast<keel::usize>(wpIdx0)].y : resp.mouseWorldPos.y) + delta.y;
+                        keel::f32 newY = ((wpIdx0 >= 0 && wpIdx0 < keel::as<keel::i32>(se->waypoints.size())) ? se->waypoints[keel::as<keel::usize>(wpIdx0)].y : resp.mouseWorldPos.y) + delta.y;
                         if (effOpts.snapToGrid && !mods.alt) newY = SnapValue(newY, effOpts.gridStep);
-                        if (wpIdx0 >= 0 && wpIdx0 < static_cast<keel::i32>(se->waypoints.size())) se->waypoints[static_cast<keel::usize>(wpIdx0)].y = newY;
-                        if (wpIdx1 >= 0 && wpIdx1 < static_cast<keel::i32>(se->waypoints.size())) se->waypoints[static_cast<keel::usize>(wpIdx1)].y = newY;
+                        if (wpIdx0 >= 0 && wpIdx0 < keel::as<keel::i32>(se->waypoints.size())) se->waypoints[keel::as<keel::usize>(wpIdx0)].y = newY;
+                        if (wpIdx1 >= 0 && wpIdx1 < keel::as<keel::i32>(se->waypoints.size())) se->waypoints[keel::as<keel::usize>(wpIdx1)].y = newY;
                     } else {
-                        float newX = ((wpIdx0 >= 0 && wpIdx0 < static_cast<keel::i32>(se->waypoints.size())) ? se->waypoints[static_cast<keel::usize>(wpIdx0)].x : resp.mouseWorldPos.x) + delta.x;
+                        keel::f32 newX = ((wpIdx0 >= 0 && wpIdx0 < keel::as<keel::i32>(se->waypoints.size())) ? se->waypoints[keel::as<keel::usize>(wpIdx0)].x : resp.mouseWorldPos.x) + delta.x;
                         if (effOpts.snapToGrid && !mods.alt) newX = SnapValue(newX, effOpts.gridStep);
-                        if (wpIdx0 >= 0 && wpIdx0 < static_cast<keel::i32>(se->waypoints.size())) se->waypoints[static_cast<keel::usize>(wpIdx0)].x = newX;
-                        if (wpIdx1 >= 0 && wpIdx1 < static_cast<keel::i32>(se->waypoints.size())) se->waypoints[static_cast<keel::usize>(wpIdx1)].x = newX;
+                        if (wpIdx0 >= 0 && wpIdx0 < keel::as<keel::i32>(se->waypoints.size())) se->waypoints[keel::as<keel::usize>(wpIdx0)].x = newX;
+                        if (wpIdx1 >= 0 && wpIdx1 < keel::as<keel::i32>(se->waypoints.size())) se->waypoints[keel::as<keel::usize>(wpIdx1)].x = newX;
                     }
                     resp.changed = true;
                     resp.diagramModified = true;
@@ -4326,23 +4326,23 @@ BpmnEditorResponse BpmnEditor::Run(
                     if (!n) continue;
                     if (n->type == BpmnNodeType::BoundaryEvent && n->attachedToNodeId != 0) {
                         if (const BpmnNode* host = diagram.FindNode(n->attachedToNodeId)) {
-                            const float newCenterX = initPos.x + n->size.x * 0.5f + delta.x;
+                            const keel::f32 newCenterX = initPos.x + n->size.x * 0.5f + delta.x;
                             n->boundaryRatioX = keel::clamp((newCenterX - host->pos.x) / keel::max(1.0f, host->size.x), 0.15f, 0.85f);
                         }
                         continue;
                     }
                     Vec2 targetPos{initPos.x + delta.x, initPos.y + delta.y};
                     if (effOpts.snapToGrid && !mods.alt) {
-                        const float cx = SnapValue(targetPos.x + n->size.x * 0.5f, effOpts.gridStep);
-                        const float cy = SnapValue(targetPos.y + n->size.y * 0.5f, effOpts.gridStep);
+                        const keel::f32 cx = SnapValue(targetPos.x + n->size.x * 0.5f, effOpts.gridStep);
+                        const keel::f32 cy = SnapValue(targetPos.y + n->size.y * 0.5f, effOpts.gridStep);
                         targetPos.x = cx - n->size.x * 0.5f;
                         targetPos.y = cy - n->size.y * 0.5f;
                     }
 
                     if (effOpts.smartGuides && nid == state.primaryNodeId) {
-                        const float snapTol = 6.0f;
-                        const float myCX = targetPos.x + n->size.x * 0.5f;
-                        const float myCY = targetPos.y + n->size.y * 0.5f;
+                        const keel::f32 snapTol = 6.0f;
+                        const keel::f32 myCX = targetPos.x + n->size.x * 0.5f;
+                        const keel::f32 myCY = targetPos.y + n->size.y * 0.5f;
                         for (const auto& other : diagram.nodes) {
                             if (state.IsNodeSelected(other.id) || other.type == BpmnNodeType::BoundaryEvent) continue;
                             const Vec2 oc = other.Center();
@@ -4413,14 +4413,14 @@ BpmnEditorResponse BpmnEditor::Run(
         if (state.spaceToolDragging) {
             if (lmbDown) {
                 state.spaceCurrentWorld = resp.mouseWorldPos;
-                const float dx = state.spaceCurrentWorld.x - state.spaceStartWorld.x;
-                const float dy = state.spaceCurrentWorld.y - state.spaceStartWorld.y;
+                const keel::f32 dx = state.spaceCurrentWorld.x - state.spaceStartWorld.x;
+                const keel::f32 dy = state.spaceCurrentWorld.y - state.spaceStartWorld.y;
                 if (!state.spaceToolAxisLocked && (keel::abs(dx) > 6.0f || keel::abs(dy) > 6.0f)) {
                     state.spaceToolAxisLocked = true;
                     state.spaceToolHorizontal = (keel::abs(dx) >= keel::abs(dy));
                 }
                 if (state.spaceToolAxisLocked) {
-                    const float shift = effOpts.snapToGrid
+                    const keel::f32 shift = effOpts.snapToGrid
                         ? SnapValue(state.spaceToolHorizontal ? dx : dy, effOpts.gridStep)
                         : (state.spaceToolHorizontal ? dx : dy);
                     for (const auto& [nid, initPos] : state.spaceInitialNodes) {
@@ -4663,7 +4663,7 @@ BpmnEditorResponse BpmnEditor::Run(
 
     state.renderSnapshot = diagram.clone();
 
-    Node* node = ctx.CreateNode(static_cast<NodeType>(static_cast<keel::u16>(NodeType::User) + 20u), id);
+    Node* node = ctx.CreateNode(static_cast<NodeType>(keel::as<keel::u16>(NodeType::User) + 20u), id);
     auto* payload = ctx.AllocPayload<BpmnEditorPayload>();
     payload->opts = effOpts;
     payload->opts.tooltip = ctx.AllocText(opts.tooltip);
@@ -4673,7 +4673,7 @@ BpmnEditorResponse BpmnEditor::Run(
     payload->activeEditBuffer = ctx.AllocString(activeEditStr);
     payload->activeEditCursor = activeEditCursor;
     payload->cursorBlinkOn = ctx.IsCursorVisible();
-    payload->animPhase = static_cast<float>(keel::fmod(nowSec * 0.85, 1.0));
+    payload->animPhase = keel::as<keel::f32>(keel::fmod(nowSec * 0.85, 1.0));
 
     node->text = "BpmnEditor";
     node->SetPayload(payload);
@@ -4690,9 +4690,9 @@ BpmnEditorResponse BpmnEditor::Run(
     }
     for (const auto& n : diagram.nodes) {
         graphHash = detail::HashArgs(
-            graphHash, n.id, static_cast<keel::u8>(n.type), n.label, n.documentation,
+            graphHash, n.id, keel::as<keel::u8>(n.type), n.label, n.documentation,
             n.pos.x, n.pos.y, n.size.x, n.size.y,
-            static_cast<keel::u8>(n.taskType), static_cast<keel::u8>(n.gatewayType), static_cast<keel::u8>(n.eventDef),
+            keel::as<keel::u8>(n.taskType), keel::as<keel::u8>(n.gatewayType), keel::as<keel::u8>(n.eventDef),
             n.nonInterrupting, n.isExpanded, n.labelOffset.x, n.labelOffset.y,
             n.activeOutgoingEdgeId, n.tokenExecutionCount, n.activeTokensInside,
             n.slaDurationMs, n.loopMarker, n.parallelMultiInstance
@@ -4700,7 +4700,7 @@ BpmnEditorResponse BpmnEditor::Run(
     }
     for (const auto& e : diagram.edges) {
         graphHash = detail::HashArgs(
-            graphHash, e.id, e.fromNodeId, e.toNodeId, static_cast<keel::u8>(e.flowType), e.label,
+            graphHash, e.id, e.fromNodeId, e.toNodeId, keel::as<keel::u8>(e.flowType), e.label,
             e.labelOffset.x, e.labelOffset.y, e.waypoints.size()
         );
         for (const auto& wp : e.waypoints) {
@@ -4708,13 +4708,13 @@ BpmnEditorResponse BpmnEditor::Run(
         }
     }
     for (const auto& t : diagram.tokens) {
-        graphHash = detail::HashArgs(graphHash, t.id, t.edgeId, t.nodeId, static_cast<keel::i32>(t.progress * 200.0f));
+        graphHash = detail::HashArgs(graphHash, t.id, t.edgeId, t.nodeId, keel::as<keel::i32>(t.progress * 200.0f));
     }
 
     node->visualHash = detail::HashArgs(
         graphHash,
-        static_cast<keel::u8>(payload->opts.routingMode),
-        static_cast<keel::u8>(payload->opts.themePreset),
+        keel::as<keel::u8>(payload->opts.routingMode),
+        keel::as<keel::u8>(payload->opts.themePreset),
         payload->opts.showLeftPalette,
         payload->opts.showTopBar,
         payload->opts.showContextPad,
@@ -4729,7 +4729,7 @@ BpmnEditorResponse BpmnEditor::Run(
         state.pan.x,
         state.pan.y,
         state.zoom,
-        static_cast<keel::u8>(state.activeTool),
+        keel::as<keel::u8>(state.activeTool),
         state.primaryNodeId,
         state.selectedEdgeId,
         state.selectedLaneId,
@@ -4762,14 +4762,14 @@ BpmnEditorResponse BpmnEditor::Run(
         state.editingLaneId,
         payload->activeEditBuffer,
         payload->cursorBlinkOn,
-        effOpts.tokenSimulation ? static_cast<keel::i32>(payload->animPhase * 60.0f) : 0,
+        effOpts.tokenSimulation ? keel::as<keel::i32>(payload->animPhase * 60.0f) : 0,
         viewRect.w,
         viewRect.h,
         effectiveSize,
         isDisabled
     );
 
-    node->measureFn = [](const Node* n, float availableWidth, ICanvas* c, const UiTheme& th) noexcept -> Vec2 {
+    node->measureFn = [](const Node* n, keel::f32 availableWidth, ICanvas* c, const UiTheme& th) noexcept -> Vec2 {
         const auto* p = n->As<BpmnEditorPayload>();
         if (!p) return {0.0f, 0.0f};
         BpmnEditorOptions effOpts = p->opts;
@@ -4844,7 +4844,7 @@ keel::String ExtractXmlAttr(keel::StringRef tag, keel::StringRef attrName) {
     return UnescapeXmlText(tag.substr(valStart, valEnd - valStart));
 }
 
-float ExtractXmlFloatAttr(keel::StringRef tag, keel::StringRef attrName, float fallback = 0.0f) {
+keel::f32 ExtractXmlFloatAttr(keel::StringRef tag, keel::StringRef attrName, keel::f32 fallback = 0.0f) {
     const keel::String s = ExtractXmlAttr(tag, attrName);
     if (s.empty()) return fallback;
     const auto parsed = keel::parse_f32(s.as_ref().trim());
@@ -4856,7 +4856,7 @@ keel::u32 ParseTrailingIdNumber(keel::StringRef xmlId) {
     while (i > 0 && xmlId[i - 1] >= '0' && xmlId[i - 1] <= '9') --i;
     if (i == xmlId.size()) return 0;
     const auto parsed = keel::parse_u64(xmlId.substr(i));
-    return parsed.is_ok() ? static_cast<keel::u32>(parsed.value()) : 0;
+    return parsed.is_ok() ? keel::as<keel::u32>(parsed.value()) : 0;
 }
 
 struct PendingBoundaryAttach {
@@ -4988,10 +4988,10 @@ keel::String BpmnEditor::ExportBpmnXml(const BpmnDiagram& diagram) {
             "      </bpmndi:BPMNShape>\n",
             l.id,
             l.id,
-            static_cast<keel::i32>(l.rect.x),
-            static_cast<keel::i32>(l.rect.y),
-            static_cast<keel::i32>(l.rect.w),
-            static_cast<keel::i32>(l.rect.h)
+            keel::as<keel::i32>(l.rect.x),
+            keel::as<keel::i32>(l.rect.y),
+            keel::as<keel::i32>(l.rect.w),
+            keel::as<keel::i32>(l.rect.h)
         );
     }
 
@@ -5004,10 +5004,10 @@ keel::String BpmnEditor::ExportBpmnXml(const BpmnDiagram& diagram) {
         keel::format_into(
             xml,
             "        <dc:Bounds x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" />\n",
-            static_cast<keel::i32>(n.pos.x),
-            static_cast<keel::i32>(n.pos.y),
-            static_cast<keel::i32>(n.size.x),
-            static_cast<keel::i32>(n.size.y)
+            keel::as<keel::i32>(n.pos.x),
+            keel::as<keel::i32>(n.pos.y),
+            keel::as<keel::i32>(n.size.x),
+            keel::as<keel::i32>(n.size.y)
         );
         if (keel::abs(n.labelOffset.x) > 0.5f || keel::abs(n.labelOffset.y) > 0.5f) {
             keel::format_into(
@@ -5015,8 +5015,8 @@ keel::String BpmnEditor::ExportBpmnXml(const BpmnDiagram& diagram) {
                 "        <bpmndi:BPMNLabel>\n"
                 "          <dc:Bounds x=\"{}\" y=\"{}\" width=\"90\" height=\"20\" />\n"
                 "        </bpmndi:BPMNLabel>\n",
-                static_cast<keel::i32>(n.pos.x + n.labelOffset.x),
-                static_cast<keel::i32>(n.pos.y + n.labelOffset.y)
+                keel::as<keel::i32>(n.pos.x + n.labelOffset.x),
+                keel::as<keel::i32>(n.pos.y + n.labelOffset.y)
             );
         }
         xml.append("      </bpmndi:BPMNShape>\n");
@@ -5032,8 +5032,8 @@ keel::String BpmnEditor::ExportBpmnXml(const BpmnDiagram& diagram) {
             keel::format_into(
                 xml,
                 "        <di:waypoint x=\"{}\" y=\"{}\" />\n",
-                static_cast<keel::i32>(pt.x),
-                static_cast<keel::i32>(pt.y)
+                keel::as<keel::i32>(pt.x),
+                keel::as<keel::i32>(pt.y)
             );
         }
         if (keel::abs(e.labelOffset.x) > 0.5f || keel::abs(e.labelOffset.y) > 0.5f) {
@@ -5042,8 +5042,8 @@ keel::String BpmnEditor::ExportBpmnXml(const BpmnDiagram& diagram) {
                 "        <bpmndi:BPMNLabel>\n"
                 "          <dc:Bounds x=\"{}\" y=\"{}\" width=\"80\" height=\"20\" />\n"
                 "        </bpmndi:BPMNLabel>\n",
-                static_cast<keel::i32>(e.labelOffset.x),
-                static_cast<keel::i32>(e.labelOffset.y)
+                keel::as<keel::i32>(e.labelOffset.x),
+                keel::as<keel::i32>(e.labelOffset.y)
             );
         }
         xml.append("      </bpmndi:BPMNEdge>\n");
@@ -5102,7 +5102,7 @@ bool BpmnEditor::ImportBpmnXml(keel::StringRef xml, BpmnDiagram& outDiagram) {
             else parsed.nextId = keel::max(parsed.nextId, l.id + 1);
             l.name = name.empty() ? keel::StringRef("Lane") : name.as_ref();
             l.poolName = poolNameAttr.empty() ? parsed.name.as_ref() : poolNameAttr.as_ref();
-            l.rect = Rect(80.0f, 80.0f + static_cast<float>(parsed.lanes.size()) * 190.0f, 1280.0f, 190.0f);
+            l.rect = Rect(80.0f, 80.0f + keel::as<keel::f32>(parsed.lanes.size()) * 190.0f, 1280.0f, 190.0f);
             laneIdMap.put(keel::move(xmlId), l.id);
             parsed.lanes.push_back(keel::move(l));
         } else if (localName == "startEvent" || localName == "intermediateCatchEvent" || localName == "intermediateThrowEvent" ||
@@ -5154,7 +5154,7 @@ bool BpmnEditor::ImportBpmnXml(keel::StringRef xml, BpmnDiagram& outDiagram) {
                 else                                      n.taskType = BpmnTaskType::User;
             }
             n.size = BpmnDiagram::DefaultNodeSize(n.type);
-            n.pos = {140.0f + static_cast<float>(parsed.nodes.size()) * 160.0f, 180.0f};
+            n.pos = {140.0f + keel::as<keel::f32>(parsed.nodes.size()) * 160.0f, 180.0f};
 
             if (tagContent.back() != '/') {
                 keel::SmallString<64> closeNeedle = keel::SmallString<64>::from("</");
@@ -5211,10 +5211,10 @@ bool BpmnEditor::ImportBpmnXml(keel::StringRef xml, BpmnDiagram& outDiagram) {
                     const keel::usize bEnd = shapeBody.find('>', bPos);
                     if (bEnd != keel::kInvalidIndex) {
                         const keel::StringRef bTag = shapeBody.substr(bPos, bEnd - bPos);
-                        const float x = ExtractXmlFloatAttr(bTag, "x", 0.0f);
-                        const float y = ExtractXmlFloatAttr(bTag, "y", 0.0f);
-                        const float w = ExtractXmlFloatAttr(bTag, "width", 100.0f);
-                        const float h = ExtractXmlFloatAttr(bTag, "height", 80.0f);
+                        const keel::f32 x = ExtractXmlFloatAttr(bTag, "x", 0.0f);
+                        const keel::f32 y = ExtractXmlFloatAttr(bTag, "y", 0.0f);
+                        const keel::f32 w = ExtractXmlFloatAttr(bTag, "width", 100.0f);
+                        const keel::f32 h = ExtractXmlFloatAttr(bTag, "height", 80.0f);
                         if (const keel::u32* nidPtr = nodeIdMap.get(elemRef.as_ref())) {
                             if (BpmnNode* n = parsed.FindNode(*nidPtr)) {
                                 n->pos = {x, y};

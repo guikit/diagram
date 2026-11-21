@@ -140,12 +140,12 @@ struct BpmnNode {
     bool nonInterrupting{false};              ///< Dashed border for non-interrupting Boundary / Intermediate events
 
     keel::u32 attachedToNodeId{0};             ///< For `BoundaryEvent`: parent `Task` / `SubProcess` ID
-    float boundaryRatioX{0.72f};              ///< Normalized position [0.15 .. 0.85] along parent bottom edge
+    keel::f32 boundaryRatioX{0.72f};              ///< Normalized position [0.15 .. 0.85] along parent bottom edge
     keel::u32 laneId{0};                       ///< Optional owning swimlane ID
 
     // --- Token Simulation & SLA Telemetry ---
     keel::u32 activeOutgoingEdgeId{0};         ///< Selected outgoing edge ID for Exclusive (XOR) gateway in simulation
-    float slaDurationMs{420.0f};              ///< Nominal activity duration / SLA metric (ms)
+    keel::f32 slaDurationMs{420.0f};              ///< Nominal activity duration / SLA metric (ms)
     keel::u32 tokenExecutionCount{0};          ///< Total tokens that have passed through this node
     keel::u32 activeTokensInside{0};           ///< Live tokens currently dwelling inside this node
 
@@ -199,7 +199,7 @@ struct BpmnToken {
     keel::u32 id{0};
     keel::u32 edgeId{0};                       ///< Non-zero when token is traveling along an edge
     keel::u32 nodeId{0};                       ///< Non-zero when token is executing inside a Task / IntermediateEvent
-    float progress{0.0f};                     ///< Normalized progress in [0.0 .. 1.0]
+    keel::f32 progress{0.0f};                     ///< Normalized progress in [0.0 .. 1.0]
     Color color{16, 185, 129, 255};           ///< Token badge color
     keel::u32 instanceId{1};                   ///< Process instance identifier
 
@@ -403,7 +403,7 @@ struct BpmnDiagram {
             if (n.type != BpmnNodeType::BoundaryEvent || n.attachedToNodeId == 0) continue;
             const BpmnNode* host = FindNode(n.attachedToNodeId);
             if (!host) continue;
-            const float ratio = (n.boundaryRatioX < 0.15f) ? 0.15f : ((n.boundaryRatioX > 0.85f) ? 0.85f : n.boundaryRatioX);
+            const keel::f32 ratio = (n.boundaryRatioX < 0.15f) ? 0.15f : ((n.boundaryRatioX > 0.85f) ? 0.85f : n.boundaryRatioX);
             n.boundaryRatioX = ratio;
             if (n.size.x <= 1.0f || n.size.y <= 1.0f) {
                 n.size = DefaultNodeSize(BpmnNodeType::BoundaryEvent);
@@ -460,13 +460,13 @@ struct BpmnEditorOptions {
     bool showGrid{true};                ///< Render dot/line world grid
     bool snapToGrid{true};              ///< Snap dragged/created elements to grid
     bool smartGuides{true};             ///< Render laser alignment guides (center X/Y, edges) while dragging
-    float gridStep{20.0f};              ///< World-space grid step in pixels (10 .. 40)
+    keel::f32 gridStep{20.0f};              ///< World-space grid step in pixels (10 .. 40)
     bool readOnly{false};               ///< Disable graph topology mutations while keeping pan/zoom/selection
 
     // --- Token Simulation (`bpmn-js-token-simulation`) & Telemetry ---
     bool tokenSimulation{false};        ///< Enable interactive process token simulation mode
     bool autoSpawnTokens{true};         ///< Automatically trigger Start Events periodically in simulation mode
-    float simulationSpeed{1.0f};        ///< Token animation speed multiplier (0.25x .. 3.0x)
+    keel::f32 simulationSpeed{1.0f};        ///< Token animation speed multiplier (0.25x .. 3.0x)
     bool showSlaHeatmap{false};         ///< Render SLA duration / bottleneck heatmap glow on activities
 
     // --- Optional Two-Way State Bindings ---
@@ -490,7 +490,7 @@ struct BpmnEditorOptions {
 struct BpmnEditorResponse : public Response {
     Rect canvasRect{};                  ///< Resolved screen-space viewport rectangle
     Vec2 pan{0.0f, 0.0f};               ///< Current world pan offset in screen pixels
-    float zoom{1.0f};                   ///< Current canvas zoom factor (0.25 .. 2.50)
+    keel::f32 zoom{1.0f};                   ///< Current canvas zoom factor (0.25 .. 2.50)
     Vec2 mouseWorldPos{0.0f, 0.0f};     ///< Current cursor position in BPMN world coordinates
 
     BpmnTool activeTool{BpmnTool::Select};
@@ -523,7 +523,7 @@ public:
         UiSize size,
         ICanvas* canvas = nullptr,
         const UiTheme& theme = {},
-        float availableWidth = 0.0f
+        keel::f32 availableWidth = 0.0f
     );
 
     /// Serialize `diagram` into standard BPMN 2.0 XML (`<bpmn:definitions>` + `<bpmndi:BPMNDiagram>`).
