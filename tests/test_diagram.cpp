@@ -1,8 +1,16 @@
 #include "guikit/guikit.hpp"
 #include "guikit/diagram.hpp"
+#if defined(GUIKIT_HAS_BACKEND_THORVG) && GUIKIT_HAS_BACKEND_THORVG
 #include "guikit/backend/thor_canvas.hpp"
+#endif
 #include "keel/keel.h"
 #include "keel/math.h"
+
+#if defined(GUIKIT_HAS_BACKEND_THORVG) && GUIKIT_HAS_BACKEND_THORVG
+using TestCanvas = guikit::ThorCanvas;
+#else
+using TestCanvas = guikit::NullCanvas;
+#endif
 
 static keel::i32 g_failures = 0;
 
@@ -28,7 +36,7 @@ using namespace guikit;
 void TestBpmnEditorWidgetWorkflow() {
     keel::println("  -> TestBpmnEditorWidgetWorkflow");
     Context ui;
-    ThorCanvas canvas;
+    TestCanvas canvas;
     keel::Array<keel::u32> pixels(960 * 600);
     canvas.SetTarget(pixels.data(), 960, 600, 960);
 
