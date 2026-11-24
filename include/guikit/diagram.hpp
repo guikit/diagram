@@ -16,7 +16,8 @@ inline BpmnEditorResponse BpmnEditor(
     const BpmnEditorOptions& opts = {},
     keel::SourceLocation loc = keel::SourceLocation::current()
 ) {
-    return ui.Run<guikit::BpmnEditor>(diagram, opts, loc);
+    WidgetExecGuard guard(ui);
+    return guikit::BpmnEditor::Run(ui, diagram, opts, loc);
 }
 
 } // namespace guikit::diagram
