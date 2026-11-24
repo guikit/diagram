@@ -2,8 +2,8 @@
 
 #include "guikit/core/control.hpp"
 #include "guikit/core/response.hpp"
-#include "guikit/core/theme.hpp"
-#include "guikit/core/tokens.hpp"
+#include "guikit/style/theme.hpp"
+#include "guikit/style/tokens.hpp"
 #include "guikit/core/types.hpp"
 #include "guikit/graphics/icon.hpp"
 #include "keel/array.h"
