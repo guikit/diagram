@@ -23,6 +23,8 @@ endif()
 
 add_library(guikit_diagram STATIC
     src/guikit/diagram/bpmn_editor.cpp
+    src/guikit/diagram/bpmn_render.cpp
+    src/guikit/diagram/bpmn_simulation.cpp
 )
 add_library(guikit::diagram ALIAS guikit_diagram)
 set_target_properties(guikit_diagram PROPERTIES EXPORT_NAME diagram)
